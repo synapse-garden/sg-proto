@@ -24,7 +24,7 @@ func init() {
 type MissingError []byte
 
 func (m MissingError) Error() string {
-	return fmt.Sprintf("no such ticket %#q", m)
+	return fmt.Sprintf("no such ticket %#q", string(m))
 }
 
 func IsMissing(err error) bool {

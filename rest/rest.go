@@ -1,16 +1,10 @@
 package rest
 
 import (
-	"github.com/synapse-garden/sg-proto/incept"
-	"github.com/synapse-garden/sg-proto/user"
+	"github.com/synapse-garden/sg-proto/store"
 
 	"github.com/boltdb/bolt"
 	"github.com/julienschmidt/httprouter"
-)
-
-var (
-	Version       = []byte("0.0.1-alpha-2")
-	VersionBucket = []byte("version")
 )
 
 // Needed endpoints:
@@ -45,13 +39,7 @@ type API func(*httprouter.Router, *bolt.DB)
 
 // Bind binds the API on the given DB.  It sets up REST endpoints as needed.
 func Bind(db *bolt.DB) (*httprouter.Router, error) {
-	err := db.Update(func(tx *bolt.Tx) error {
-		if err := setupBuckets(tx); err != nil {
-			return err
-		}
-		return tx.Bucket(VersionBucket).Put([]byte("version"), Version)
-	})
-	if err != nil {
+	if err := db.Update(store.Prep); err != nil {
 		return nil, err
 	}
 	htr := httprouter.New()
@@ -62,23 +50,4 @@ func Bind(db *bolt.DB) (*httprouter.Router, error) {
 	}
 
 	return htr, nil
-}
-
-func setupBuckets(tx *bolt.Tx) error {
-	for _, api := range [][]byte{
-		VersionBucket,
-		incept.TicketBucket,
-		user.UserBucket,
-	} {
-		_, err := tx.CreateBucketIfNotExists(api)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func Migrate(tx *bolt.Tx) error {
-	return nil
 }
