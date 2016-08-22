@@ -1,1 +1,5 @@
 *.sw[nop]
+*~
+cert.key
+cert.pem
+my.db
