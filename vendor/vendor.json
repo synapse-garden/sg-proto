@@ -17,6 +17,13 @@
 			"tree": true
 		},
 		{
+			"checksumSHA1": "Hky3u+8Rqum+wB5BHMj0A8ZmT4g=",
+			"path": "github.com/pkg/errors",
+			"revision": "17b591df37844cde689f4d5813e5cea0927d8dd2",
+			"revisionTime": "2016-08-22T09:00:10Z",
+			"tree": true
+		},
+		{
 			"checksumSHA1": "zmC8/3V4ls53DJlNTKDZwPSC/dA=",
 			"path": "github.com/satori/go.uuid",
 			"revision": "0aa62d5ddceb50dbcb909d790b5345affd3669b6",
@@ -28,6 +35,13 @@
 			"path": "golang.org/x/sys/unix",
 			"revision": "076b546753157f758b316e59bcb51e6807c04057",
 			"revisionTime": "2016-06-01T13:19:39Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "I2d7Kn572Fz02mnnlcI4MHXCu0c=",
+			"path": "gopkg.in/check.v1",
+			"revision": "4f90aeace3a26ad7021961c297b22c42160c7b25",
+			"revisionTime": "2016-01-05T16:49:36Z",
 			"tree": true
 		}
 	],
