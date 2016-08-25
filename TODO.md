@@ -40,6 +40,7 @@
 ## Account
 
 () Ticket API
+() Password hash
 () Secure ticket "incept" endpoint
 () Create user
 () Log in
