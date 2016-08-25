@@ -7,6 +7,7 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
+	"github.com/synapse-garden/sg-proto/store"
 )
 
 // TempDB returns a temporary DB and its temporary directory.
@@ -38,6 +39,22 @@ func CleanupDB(db *bolt.DB) error {
 	return nil
 }
 
+func FindForKeys(tx *bolt.Tx, bucket []byte, keys ...[]byte) ([][]byte, error) {
+	b := tx.Bucket(bucket)
+	if b == nil {
+		return nil, errors.Errorf("no such bucket %#q", bucket)
+	}
+	var result [][]byte
+	for _, k := range keys {
+		if bs := b.Get(k); bs != nil {
+			result = append(result, bs)
+		} else {
+			return nil, store.MissingError(k)
+		}
+	}
+	return result, nil
+}
+
 // FindAll returns a copy of all keys and values in the given bucket.
 func FindAll(tx *bolt.Tx, bucket []byte) ([][]byte, [][]byte, error) {
 	b := tx.Bucket(bucket)
@@ -45,14 +62,8 @@ func FindAll(tx *bolt.Tx, bucket []byte) ([][]byte, [][]byte, error) {
 		return nil, nil, errors.Errorf("no such bucket %#q", bucket)
 	}
 
-	// Create a cursor for iteration.
 	c := b.Cursor()
 
-	// Iterate over items in sorted key order. This starts from the
-	// first key/value pair and updates the k/v variables to the
-	// next key/value on each iteration.
-	//
-	// The loop finishes at the end of the cursor when a nil key is returned.
 	var resultKeys, resultValues [][]byte
 	for k, v := c.First(); k != nil; k, v = c.Next() {
 		resultKeys = append(resultKeys, k[:])

@@ -5,8 +5,6 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
-	"github.com/synapse-garden/sg-proto/incept"
-	"github.com/synapse-garden/sg-proto/user"
 )
 
 var (
@@ -14,22 +12,17 @@ var (
 	VersionBucket = []byte("version")
 )
 
-func Prep(tx *bolt.Tx) error {
-	if err := Migrate(Version)(tx); err != nil {
-		return err
-	}
-	err := SetupBuckets(
-		VersionBucket,
-		incept.TicketBucket,
-		user.UserBucket,
-	)(tx)
-	if err != nil {
-		return err
-	}
-	return tx.Bucket(VersionBucket).Put([]byte("version"), Version)
+type Bucket []byte
+
+func Prep(buckets ...Bucket) func(*bolt.Tx) error {
+	return Wrap(
+		Migrate(Version),
+		SetupBuckets(buckets...),
+		Put(VersionBucket, []byte("version"), Version),
+	)
 }
 
-func SetupBuckets(buckets ...[]byte) func(*bolt.Tx) error {
+func SetupBuckets(buckets ...Bucket) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
 		for _, bucket := range buckets {
 			_, err := tx.CreateBucketIfNotExists(bucket)

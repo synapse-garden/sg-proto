@@ -1,7 +1,9 @@
 package rest
 
 import (
+	"github.com/synapse-garden/sg-proto/incept"
 	"github.com/synapse-garden/sg-proto/store"
+	"github.com/synapse-garden/sg-proto/users"
 
 	"github.com/boltdb/bolt"
 	"github.com/julienschmidt/httprouter"
@@ -24,22 +26,15 @@ import (
 //  - POST /todo {bounty, due}
 //  - POST /todo/:id/complete => Get bounty if before due
 
-type HTTPError struct {
-	cause   error
-	message []byte
-}
-
-func (h *HTTPError) Error() string { return h.cause.Error() }
-func (h *HTTPError) Read() ([]byte, error) {
-	return h.message, nil
-}
-
 // API binds some functions on an httprouter.Router.
 type API func(*httprouter.Router, *bolt.DB)
 
 // Bind binds the API on the given DB.  It sets up REST endpoints as needed.
 func Bind(db *bolt.DB) (*httprouter.Router, error) {
-	if err := db.Update(store.Prep); err != nil {
+	if err := db.Update(store.Prep(
+		incept.TicketBucket,
+		users.UserBucket,
+	)); err != nil {
 		return nil, err
 	}
 	htr := httprouter.New()
