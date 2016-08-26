@@ -18,7 +18,6 @@ func Prep(buckets ...Bucket) func(*bolt.Tx) error {
 	return Wrap(
 		Migrate(Version),
 		SetupBuckets(buckets...),
-		Put(VersionBucket, []byte("version"), Version),
 	)
 }
 
@@ -42,8 +41,18 @@ func Migrate(version []byte) func(*bolt.Tx) error {
 			if bytes.Compare(version, newVer) != 0 {
 				return MigrateFrom(tx, version)
 			}
+			return nil
 		}
-		return nil
+
+		b, err := tx.CreateBucket(VersionBucket)
+		if err != nil {
+			return err
+		}
+		err = b.Put([]byte("version"), Version)
+		if err != nil {
+			return err
+		}
+		return Migrate(Version)(tx)
 	}
 }
 
@@ -53,7 +62,7 @@ func MigrateFrom(tx *bolt.Tx, from []byte) error {
 		return nil
 	}
 	migration, ok := map[string]func(*bolt.Tx) error{
-		"0.0.1-alpha-2": Wrap(),
+		"0.0.1-alpha-2": Put(VersionBucket, []byte("version"), Version),
 	}[string(from)]
 	if !ok {
 		return errors.Errorf("no migration defined from version %#q", from)
