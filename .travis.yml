@@ -1,0 +1,16 @@
+language: go
+
+go: tip
+
+script:
+- go test -check.v ./...
+- go build -o build/sg ./sg
+
+deploy:
+  provider: releases
+  api_key:
+    secure: NffQ65IkghPqs3B5HEXZy2Xx/BENBN0Gn6OWIRiONSRQrgJk9JDwjhQRkIpyPunZ/U3Yr1CYQltwKOIu7nVyNDHNrLcq5MCTNhG9qDE1yZtT2qOc3Dtt7oYudF8gEGfX+9rrTaO1q9/NBhPVO+eu6V+05sELZl7Ql4eDSiULCXpks8r4bOFV0JTUlTssxu+mWKAOZB2uoZ2i4rkb1kAmnkqJWDvv/C9KPweAppA8oKWtuGdUB1aUC/tNq7ANcNJ/cwbecXwSMfkpTJVE0Aclop3cjog2UsXKAJ6/Vg/OpC8kpdFY12g2oi2mjLFc9CnMh/mkZrJITEawX3E5E1U/KUY4b4O5N3sVT5fseR8/QzT1C0zi76kFR14gAOsJMEiM30xIy5slqRcYAfAJIeQmI9FrhybgFeNRnnChIXpzdjkf1xAzOgAXsKWZjMM5+2hJBXfWnUNE2mTsjQ40Qb2XL1sww7G9Lrzvr/vHPpkMI5l+Uo5kcOjXPMGnqIzQuz8VEEhy7g0zoCT/piwH7AS9wU6r6w+OJBN05+t0qSKpxHt1IYVjJEHxOBNyYMXPJLhRhLd9A+XVVsm3tjHw9mdg7Uky91qIUE037aw4SA6P08W1Ozin1wXrmmkuVtIOLyYkfWA42L+l97rwAwUq+Hfdx9+ZlPhoKnyxOdEhqE2GuR8=
+  file: build/sg
+  skip_cleanup: true
+  on:
+    tags: true
