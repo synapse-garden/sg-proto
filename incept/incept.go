@@ -28,6 +28,10 @@ func (t Ticket) Bytes() []byte  { return uuid.UUID(t).Bytes() }
 func (t Ticket) String() string { return uuid.UUID(t).String() }
 
 func NewTicket(tx *bolt.Tx) (Ticket, error) {
+	// http://stackoverflow.com/a/14611355
+	// This is completely unacceptable and must be resolved.  Two
+	// Tickets MUST ***NEVER*** BE THE SAME and this should never
+	// have been considered as an option.
 	u := uuid.NewV5(masterUUID, time.Now().String())
 	if err := store.Put(TicketBucket, u.Bytes(), nil)(tx); err != nil {
 		return Ticket(uuid.Nil), err
