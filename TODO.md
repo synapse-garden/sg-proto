@@ -33,9 +33,13 @@
 
 # v0.0.1
 
+## GPL
+
+- [ ] Host own source code under /source or some such.
+
 ## Bugs
 
-- [ ] Fix Windows timestamp UUID generation
+- [ ] Fix Windows timestamp UUID generation (use uuid.NewV5)
 - [ ] Fix Windows startup BoltDB panic (nil transaction or db?)
 - [ ] Fix panic in rest.Incept
 
