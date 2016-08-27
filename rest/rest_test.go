@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/synapse-garden/sg-proto/auth"
 	"github.com/synapse-garden/sg-proto/incept"
 	"github.com/synapse-garden/sg-proto/store"
 	sgt "github.com/synapse-garden/sg-proto/testing"
@@ -33,6 +34,7 @@ func (s *RESTSuite) SetUpTest(c *C) {
 		store.SetupBuckets(
 			incept.TicketBucket,
 			users.UserBucket,
+			auth.LoginBucket,
 		),
 	)), IsNil)
 	s.db, s.tmpDir = db, tmpDir

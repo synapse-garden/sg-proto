@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/synapse-garden/sg-proto/auth"
 	"github.com/synapse-garden/sg-proto/incept"
-	"github.com/synapse-garden/sg-proto/store"
 	"github.com/synapse-garden/sg-proto/users"
 
 	"github.com/boltdb/bolt"
@@ -20,8 +20,8 @@ func Incept(r *httprouter.Router, db *bolt.DB) {
 
 func InceptHandle(db *bolt.DB) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		u := new(users.User)
-		if err := json.NewDecoder(r.Body).Decode(u); err != nil {
+		l := new(auth.Login)
+		if err := json.NewDecoder(r.Body).Decode(l); err != nil {
 			http.Error(w, fmt.Sprintf(
 				"failed to decode: %s",
 				err.Error(),
@@ -29,9 +29,9 @@ func InceptHandle(db *bolt.DB) httprouter.Handle {
 			return
 		}
 
-		if err := users.ValidateNew(u); err != nil {
+		if err := auth.ValidateNew(l); err != nil {
 			http.Error(w, fmt.Sprintf(
-				"invalid user: %s",
+				"invalid login: %s",
 				err.Error(),
 			), http.StatusBadRequest)
 			return
@@ -44,26 +44,20 @@ func InceptHandle(db *bolt.DB) httprouter.Handle {
 			return
 		}
 
-		err = incept.Incept(w, incept.Ticket(tkt), u, db)
-		switch {
-		case store.IsMissing(err):
-			http.Error(w, fmt.Sprintf(
-				"no such ticket %q",
-				key,
-			), http.StatusBadRequest)
-			return
-		case store.IsExists(err):
-			http.Error(w, fmt.Sprintf(
-				"user %q already exists",
-				u.Name,
-			), http.StatusBadRequest)
-			return
-		case err != nil:
-			http.Error(
-				w,
-				err.Error(),
-				http.StatusInternalServerError,
-			)
+		err = incept.Incept(w, incept.Ticket(tkt), l, db)
+		if err != nil {
+			var status int
+			switch err.(type) {
+			case incept.ErrTicketMissing:
+				status = http.StatusNotFound
+			case users.ErrExists:
+				status = http.StatusConflict
+			case auth.ErrExists:
+				status = http.StatusConflict
+			default:
+				status = http.StatusInternalServerError
+			}
+			http.Error(w, err.Error(), status)
 			return
 		}
 	}

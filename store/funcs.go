@@ -1,6 +1,10 @@
 package store
 
-import "github.com/boltdb/bolt"
+import (
+	"encoding/json"
+
+	"github.com/boltdb/bolt"
+)
 
 func Put(b Bucket, key, val []byte) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
@@ -14,10 +18,25 @@ func Delete(b Bucket, key []byte) func(*bolt.Tx) error {
 	}
 }
 
+func Unmarshal(b Bucket, to interface{}, key []byte) func(*bolt.Tx) error {
+	return func(tx *bolt.Tx) error {
+		if bs := tx.Bucket(b).Get(key); bs != nil {
+			return json.Unmarshal(bs, to)
+		}
+		return &MissingError{
+			Key:    key,
+			Bucket: b,
+		}
+	}
+}
+
 func CheckExists(b Bucket, key []byte) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
 		if tx.Bucket(b).Get(key) == nil {
-			return MissingError(key)
+			return &MissingError{
+				Key:    key,
+				Bucket: b,
+			}
 		}
 		return nil
 	}
@@ -26,7 +45,10 @@ func CheckExists(b Bucket, key []byte) func(*bolt.Tx) error {
 func CheckNotExist(b Bucket, key []byte) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
 		if tx.Bucket(b).Get(key) != nil {
-			return ExistsError(key)
+			return &ExistsError{
+				Key:    key,
+				Bucket: b,
+			}
 		}
 		return nil
 	}

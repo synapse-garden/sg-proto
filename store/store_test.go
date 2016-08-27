@@ -1,12 +1,7 @@
 package store_test
 
 import (
-	"errors"
-	"os"
 	"testing"
-
-	"github.com/synapse-garden/sg-proto/store"
-	sgt "github.com/synapse-garden/sg-proto/testing"
 
 	"github.com/boltdb/bolt"
 	. "gopkg.in/check.v1"
@@ -21,25 +16,25 @@ type StoreSuite struct {
 
 var _ = Suite(&StoreSuite{})
 
-func (s *StoreSuite) SetUpTest(c *C) {
-	db, tmpDir, err := sgt.TempDB("sg-test")
-	c.Assert(err, IsNil)
-	c.Assert(db.Update(store.Wrap(
-		store.Migrate(store.Version),
-		store.SetupBuckets([]byte("foo")),
-	)), IsNil)
-	s.db, s.tmpDir = db, tmpDir
+func (s *StoreSuite) TestPrep(c *C) {
+	// Wrap
+	// Migrate
+	// SetupBuckets
+	// Put "version"
 }
 
-func (s *StoreSuite) TearDownTest(c *C) {
-	if db := s.db; db != nil {
-		c.Assert(sgt.CleanupDB(db), IsNil)
-		c.Assert(os.Remove(s.tmpDir), IsNil)
-	}
+func (s *StoreSuite) TestSetupBuckets(c *C) {
+	// TODO: Fill me out
 }
-func (s *StoreSuite) TestMissingError(c *C) {
-	m := store.MissingError("hello")
-	c.Check(store.IsMissing(m), Equals, true)
-	c.Check(store.IsMissing(errors.New("hello")), Equals, false)
-	c.Check(m, ErrorMatches, "no such key `hello`")
+
+func (s *StoreSuite) TestMigrate(c *C) {
+	// if version bucket is nil, create version bucket
+	// and put the version;
+	// then compare to given version and MigrateFrom
+}
+
+func (s *StoreSuite) TestMigrateFrom(c *C) {
+	// if same version, return nil
+	// if version not found, return no migration defined
+	// otherwise return the given migration
 }

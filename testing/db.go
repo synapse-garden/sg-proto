@@ -49,7 +49,10 @@ func FindForKeys(tx *bolt.Tx, bucket []byte, keys ...[]byte) ([][]byte, error) {
 		if bs := b.Get(k); bs != nil {
 			result = append(result, bs)
 		} else {
-			return nil, store.MissingError(k)
+			return nil, &store.MissingError{
+				Key:    k,
+				Bucket: bucket,
+			}
 		}
 	}
 	return result, nil

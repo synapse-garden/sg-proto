@@ -2,10 +2,12 @@ package users
 
 import (
 	"encoding/json"
+	"fmt"
+
+	"github.com/synapse-garden/sg-proto/store"
 
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
-	"github.com/synapse-garden/sg-proto/store"
 )
 
 var UserBucket = []byte("users")
@@ -15,13 +17,31 @@ type User struct {
 	Coin int64  `json:"coin"`
 }
 
+type ErrExists string
+
+func (e ErrExists) Error() string { return fmt.Sprintf("user %#q already exists", string(e)) }
+
+type ErrMissing string
+
+func (e ErrMissing) Error() string { return fmt.Sprintf("user %#q not found", string(e)) }
+
 func CheckUserExists(u *User) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
-		b := tx.Bucket(UserBucket)
-		if val := b.Get([]byte(u.Name)); val == nil {
-			return store.MissingError(u.Name)
+		err := store.CheckExists(UserBucket, []byte(u.Name))(tx)
+		if store.IsMissing(err) {
+			return ErrMissing(u.Name)
 		}
-		return nil
+		return err
+	}
+}
+
+func CheckUserNotExist(u *User) func(*bolt.Tx) error {
+	return func(tx *bolt.Tx) error {
+		err := store.CheckNotExist(UserBucket, []byte(u.Name))(tx)
+		if store.IsExists(err) {
+			return ErrExists(u.Name)
+		}
+		return err
 	}
 }
 
@@ -29,15 +49,11 @@ func CheckUserExists(u *User) func(*bolt.Tx) error {
 // not yet been created, then Puts its JSON representation in UserBucket.
 func Create(u *User) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
-		name := []byte(u.Name)
-		if err := store.CheckNotExist(UserBucket, name)(tx); err != nil {
-			return err
-		}
 		bs, err := json.Marshal(u)
 		if err != nil {
 			return err
 		}
-		return store.Put(UserBucket, name, bs)(tx)
+		return store.Put(UserBucket, []byte(u.Name), bs)(tx)
 	}
 }
 

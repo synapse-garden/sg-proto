@@ -2,8 +2,10 @@ package incept
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 
+	"github.com/synapse-garden/sg-proto/auth"
 	"github.com/synapse-garden/sg-proto/store"
 	"github.com/synapse-garden/sg-proto/users"
 
@@ -12,6 +14,12 @@ import (
 )
 
 var TicketBucket = store.Bucket("tickets")
+
+type ErrTicketMissing string
+
+func (e ErrTicketMissing) Error() string {
+	return fmt.Sprintf("no such ticket %#q", string(e))
+}
 
 type Ticket uuid.UUID
 
@@ -26,20 +34,18 @@ func NewTicket(tx *bolt.Tx) (Ticket, error) {
 	return Ticket(u), nil
 }
 
-func CheckTicket(key Ticket) func(*bolt.Tx) error {
+func CheckTicketExist(key Ticket) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
-		bs := tx.Bucket(TicketBucket).Get(key.Bytes())
-		if bs == nil {
-			return store.MissingError(key.Bytes())
+		err := store.CheckExists(TicketBucket, key.Bytes())(tx)
+		if store.IsMissing(err) {
+			return ErrTicketMissing(key.String())
 		}
-		return nil
+		return err
 	}
 }
 
-func DeleteKey(key Ticket) func(*bolt.Tx) error {
-	return func(tx *bolt.Tx) error {
-		return tx.Bucket(TicketBucket).Delete(key.Bytes())
-	}
+func PunchTicket(key Ticket) func(*bolt.Tx) error {
+	return store.Delete(TicketBucket, key.Bytes())
 }
 
 // Incept checks that the given Ticket exists, and that the given User
@@ -48,24 +54,29 @@ func DeleteKey(key Ticket) func(*bolt.Tx) error {
 func Incept(
 	w io.Writer,
 	key Ticket,
-	u *users.User,
+	l *auth.Login,
 	db *bolt.DB,
 ) error {
-	kbs, name := key.Bytes(), []byte(u.Name)
+	user := &(l.User)
 	// Check if given ticket exists (nil => it exists)
 	if err := db.View(store.Wrap(
-		store.CheckExists(TicketBucket, kbs),
-		store.CheckNotExist(users.UserBucket, name),
+		CheckTicketExist(key),
+		users.CheckUserNotExist(user),
+		auth.CheckLoginNotExist(l),
 	)); err != nil {
 		return err
 	}
 	// Create user or fail
 	if err := db.Update(store.Wrap(
-		store.Delete(TicketBucket, kbs),
-		users.Create(u),
+		CheckTicketExist(key),
+		users.CheckUserNotExist(user),
+		auth.CheckLoginNotExist(l),
+		PunchTicket(key),
+		users.Create(&(l.User)),
+		auth.Create(l),
 	)); err != nil {
 		return err
 	}
 
-	return json.NewEncoder(w).Encode(u)
+	return json.NewEncoder(w).Encode(l.User)
 }

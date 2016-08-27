@@ -54,13 +54,13 @@ func (s *RESTSuite) TestIncept(c *C) {
 		url:        correctURL + tkts[0],
 		body:       `{}`,
 		expectCode: http.StatusBadRequest,
-		expectBody: "invalid user: name must not be blank\n",
+		expectBody: "invalid login: name must not be blank\n",
 	}, {
 		method:     "POST",
 		url:        correctURL + tkts[0],
 		body:       `{"naame":"bob"}`,
 		expectCode: http.StatusBadRequest,
-		expectBody: "invalid user: name must not be blank\n",
+		expectBody: "invalid login: name must not be blank\n",
 	}, {
 		method:     "POST",
 		url:        correctURL,
@@ -77,8 +77,8 @@ func (s *RESTSuite) TestIncept(c *C) {
 		method:     "POST",
 		url:        correctURL + "00000000-0000-0000-0000-000000000000",
 		body:       correctBody,
-		expectCode: http.StatusBadRequest,
-		expectBody: `no such ticket "00000000-0000-0000-0000-000000000000"` + "\n",
+		expectCode: http.StatusNotFound,
+		expectBody: "no such ticket `00000000-0000-0000-0000-000000000000`\n",
 	}, {
 		method:     "POST",
 		url:        correctURL + tkts[0],
@@ -90,17 +90,17 @@ func (s *RESTSuite) TestIncept(c *C) {
 		method:     "POST",
 		url:        correctURL + tkts[0],
 		body:       `{"name":"bodie"}`,
-		expectCode: http.StatusBadRequest,
+		expectCode: http.StatusNotFound,
 		expectBody: fmt.Sprintf(
-			`no such ticket %q`+"\n",
+			`no such ticket %#q`+"\n",
 			tkts[0],
 		),
 	}, {
 		method:     "POST",
 		url:        correctURL + tkts[1],
 		body:       `{"name":"bodie"}`,
-		expectCode: http.StatusBadRequest,
-		expectBody: `user "bodie" already exists` + "\n",
+		expectCode: http.StatusConflict,
+		expectBody: "user `bodie` already exists\n",
 	}, {
 		method:     "POST",
 		url:        correctURL + tkts[1],
@@ -113,7 +113,7 @@ func (s *RESTSuite) TestIncept(c *C) {
 		url:        correctURL + tkts[2],
 		body:       `{"name":"bob","coin":5}` + "\n",
 		expectCode: http.StatusBadRequest,
-		expectBody: `invalid user: user cannot be created with coin` + "\n",
+		expectBody: `invalid login: user cannot be created with coin` + "\n",
 	}} {
 		c.Logf("test %d:", i)
 		c.Logf("  %s %s", test.method, test.url)
@@ -138,7 +138,10 @@ func (s *RESTSuite) TestIncept(c *C) {
 			c.Assert(s.db.View(func(tx *bolt.Tx) error {
 				bs := tx.Bucket(users.UserBucket).Get([]byte(u.Name))
 				if bs == nil {
-					return store.MissingError([]byte(u.Name))
+					return &store.MissingError{
+						Key:    []byte(u.Name),
+						Bucket: users.UserBucket,
+					}
 				}
 				b = bs[:]
 				return nil

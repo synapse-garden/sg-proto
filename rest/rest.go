@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"github.com/synapse-garden/sg-proto/auth"
 	"github.com/synapse-garden/sg-proto/incept"
 	"github.com/synapse-garden/sg-proto/store"
 	"github.com/synapse-garden/sg-proto/users"
@@ -34,6 +35,7 @@ func Bind(db *bolt.DB) (*httprouter.Router, error) {
 	if err := db.Update(store.Prep(
 		incept.TicketBucket,
 		users.UserBucket,
+		auth.LoginBucket,
 	)); err != nil {
 		return nil, err
 	}
