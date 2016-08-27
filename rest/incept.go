@@ -14,8 +14,9 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-func Incept(r *httprouter.Router, db *bolt.DB) {
+func Incept(r *httprouter.Router, db *bolt.DB) error {
 	r.POST("/incept/:key", InceptHandle(db))
+	return nil
 }
 
 func InceptHandle(db *bolt.DB) httprouter.Handle {

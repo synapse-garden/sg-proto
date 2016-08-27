@@ -20,6 +20,13 @@ var (
 	ConfFile = flag.String("cfg", "conf.toml", "the config file to use")
 
 	SourceLocation = flag.String("source", "https://github.com/synapse-garden/sg-proto", "where the source is hosted")
+
+	Dev = flag.Bool("dev", false, "start in developer mode")
+)
+
+const (
+	SourceLicense = "Affero GPL V3"
+	Licensee      = "SynapseGarden 2016"
 )
 
 func main() {
@@ -30,22 +37,32 @@ func main() {
 		log.Fatalf("unable to open Bolt database: %s", err.Error())
 	}
 
-	if *CertFile == "" {
+	source := &rest.SourceInfo{
+		Location:   *SourceLocation,
+		License:    SourceLicense,
+		LicensedTo: Licensee,
+	}
+
+	switch {
+	case *SourceLocation == "" && !*Dev:
+		log.Fatal("must provide a source location using -source")
+	case *CertFile == "":
 		log.Printf(
 			"SG Proto hosting INSECURELY at http://%s%s",
 			*Address, *Port,
 		)
-		router, err := rest.Bind(DB)
+		router, err := rest.Bind(source, DB)
 		if err != nil {
 			log.Fatalf("failed to bind on DB: %s", err.Error())
 		}
 		log.Fatal(http.ListenAndServe(*Address+*Port, router))
 	}
+
 	log.Printf(
 		"SG Proto hosting securely at https://%s%s",
 		*Address, *Port,
 	)
-	router, err := rest.Bind(DB)
+	router, err := rest.Bind(source, DB)
 	if err != nil {
 		log.Fatalf("failed to bind on DB: %s", err.Error())
 	}
