@@ -20,8 +20,8 @@ var LoginBucket = store.Bucket("logins")
 // Login is a record of a User authentication.  It is a User with a PWHash.
 type Login struct {
 	users.User
-	PWHash [sha256.Size]byte `json:"pwhash"`
-	Salt   uuid.UUID         `json:"salt"`
+	PWHash []byte    `json:"pwhash"`
+	Salt   uuid.UUID `json:"salt"`
 }
 
 type ErrExists string
@@ -58,7 +58,11 @@ func CheckLoginNotExist(l *Login) func(*bolt.Tx) error {
 
 func ValidateNew(l *Login) error {
 	if lp := len(l.PWHash); lp != sha256.Size {
-		return errors.Errorf("invalid SHA-256: len is %d (must be %d)", lp, sha256.Size)
+		return errors.Errorf("invalid SHA-256 pwhash: len is "+
+			"%d (must be %d bytes, as base64 encoded string)",
+			lp,
+			sha256.Size,
+		)
 	}
 
 	return users.ValidateNew(&(l.User))
@@ -71,20 +75,20 @@ func Check(l *Login) func(*bolt.Tx) error {
 		if err != nil {
 			return err
 		}
-		cmp := sha256.Sum256(append(l.PWHash[:], got.Salt.Bytes()...))
-		if !bytes.Equal(got.PWHash[:], cmp[:]) {
+		cmp := sha256.Sum256(append(l.PWHash, got.Salt.Bytes()...))
+		if !bytes.Equal(got.PWHash, cmp[:]) {
 			return ErrInvalid(l.Name)
 		}
 		return nil
 	}
 }
 
-func Create(l *Login) func(*bolt.Tx) error {
+func Create(l *Login, salt uuid.UUID) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
-		salt := uuid.NewV4()
+		hash := sha256.Sum256(append(l.PWHash, salt.Bytes()...))
 		toStore := &Login{
 			User:   l.User,
-			PWHash: sha256.Sum256(append(l.PWHash[:], salt.Bytes()...)),
+			PWHash: hash[:],
 			Salt:   salt,
 		}
 

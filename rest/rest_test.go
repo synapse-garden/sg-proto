@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	uuid "github.com/satori/go.uuid"
 	"github.com/synapse-garden/sg-proto/auth"
 	"github.com/synapse-garden/sg-proto/incept"
 	"github.com/synapse-garden/sg-proto/store"
@@ -40,16 +41,10 @@ func (s *RESTSuite) SetUpTest(c *C) {
 	s.db, s.tmpDir = db, tmpDir
 
 	tkts := make([]incept.Ticket, 3)
-	c.Assert(s.db.Update(func(tx *bolt.Tx) error {
-		for i := range tkts {
-			tkt, err := incept.NewTicket(tx)
-			if err != nil {
-				return err
-			}
-			tkts[i] = tkt
-		}
-		return nil
-	}), IsNil)
+	for i := range tkts {
+		tkts[i] = incept.Ticket(uuid.NewV4())
+	}
+	c.Assert(s.db.Update(incept.NewTickets(tkts...)), IsNil)
 
 	s.tickets = tkts
 }

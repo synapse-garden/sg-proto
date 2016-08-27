@@ -27,7 +27,8 @@ import (
 //  - POST /todo {bounty, due}
 //  - POST /todo/:id/complete => Get bounty if before due
 
-// API binds some functions on an httprouter.Router.
+// API is a transform on an httprouter.Router, passing a DB for passing
+// on to httprouter.Handles.
 type API func(*httprouter.Router, *bolt.DB)
 
 // Bind binds the API on the given DB.  It sets up REST endpoints as needed.
