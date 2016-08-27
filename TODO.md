@@ -1,3 +1,8 @@
+# v0.4.0 ?
+
+- [ ] Distributed storage?
+- [ ] Cassandra / etc bigtable backend?
+
 # v0.3.0 ?
 
 - [ ] Concurrent store.Wrap?
@@ -7,6 +12,7 @@
 - [ ] Optimize buckets / transactions in packages?  Pass needed behaviors
    through store package?
 - [ ] Store.WrapBucket(store.Bucket(...), ...Transact)
+- [ ] Decide about capnproto / protobuf for Bolt
 
 # v0.2.0 ?
 
@@ -30,6 +36,7 @@
 - [ ] Poms / some kind of work measure
 - [ ] Some kind of psych features
 - [ ] Make a decision on Rust
+- [ ] Switch to encoding/gob instead of JSON on the backend
 
 # v0.0.1
 
@@ -39,9 +46,9 @@
 
 ## Bugs
 
-- [ ] Fix Windows timestamp UUID generation (use uuid.NewV5)
-- [ ] Fix Windows startup BoltDB panic (nil transaction or db?)
-- [ ] Fix panic in rest.Incept
+- [x] Fix Windows timestamp UUID generation (use uuid.NewV5)
+- [x] Fix Windows startup BoltDB panic (nil transaction or db?)
+- [x] Fix panic in rest.Incept
 
 ## Account
 
