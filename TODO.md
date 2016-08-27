@@ -44,7 +44,7 @@
 
 ## GPL
 
-- [ ] Host own source code under /source or some such.
+- [x] Host own source code under /source or some such.
 
 ## Bugs
 
