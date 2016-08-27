@@ -49,7 +49,6 @@
 
 - [x] Fix Windows timestamp UUID generation (use uuid.NewV5)
 - [x] Fix Windows startup BoltDB panic (nil transaction or db?)
-- [x] Fix panic in rest.Incept
 
 ## Login / Session
 
