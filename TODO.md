@@ -5,6 +5,7 @@
 
 # v0.3.0 ?
 
+- [ ] Secure ticket "incept" endpoint (can you just hammer it with UUIDs?)
 - [ ] Concurrent store.Wrap?
 - [ ] Concurrent store.Wrap with dep chains?
 - [ ] Dep chains?
@@ -62,7 +63,6 @@
 - [ ] incept.PunchTicket
 - [x] Ticket API
 - [x] Password hash
-- [ ] Secure ticket "incept" endpoint
 - [x] Create user
 - [ ] Log in
 - [ ] Log out
