@@ -4,7 +4,6 @@ import (
 	"os"
 	"testing"
 
-	uuid "github.com/satori/go.uuid"
 	"github.com/synapse-garden/sg-proto/auth"
 	"github.com/synapse-garden/sg-proto/incept"
 	"github.com/synapse-garden/sg-proto/store"
@@ -12,6 +11,7 @@ import (
 	"github.com/synapse-garden/sg-proto/users"
 
 	"github.com/boltdb/bolt"
+	uuid "github.com/satori/go.uuid"
 	. "gopkg.in/check.v1"
 )
 

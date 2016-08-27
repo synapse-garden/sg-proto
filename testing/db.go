@@ -5,9 +5,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/synapse-garden/sg-proto/store"
+
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
-	"github.com/synapse-garden/sg-proto/store"
 )
 
 // TempDB returns a temporary DB and its temporary directory.
