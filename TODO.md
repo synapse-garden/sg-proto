@@ -10,7 +10,7 @@
 - [ ] Dep chains?
 - [ ] DB interface?
 - [ ] Optimize buckets / transactions in packages?  Pass needed behaviors
-   through store package?
+   through store package?  NewTickets, etc. inefficient
 - [ ] Store.WrapBucket(store.Bucket(...), ...Transact)
 - [ ] Decide about capnproto / protobuf for Bolt
 

@@ -26,12 +26,19 @@ type Ticket uuid.UUID
 func (t Ticket) Bytes() []byte  { return uuid.UUID(t).Bytes() }
 func (t Ticket) String() string { return uuid.UUID(t).String() }
 
-func NewTicket(tx *bolt.Tx) (Ticket, error) {
-	u := uuid.NewV4()
-	if err := store.Put(TicketBucket, u.Bytes(), nil)(tx); err != nil {
-		return Ticket(uuid.Nil), err
+func NewTickets(ts ...Ticket) func(*bolt.Tx) error {
+	return func(tx *bolt.Tx) error {
+		for _, t := range ts {
+			if err := NewTicket(t)(tx); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
-	return Ticket(u), nil
+}
+
+func NewTicket(t Ticket) func(*bolt.Tx) error {
+	return store.Put(TicketBucket, t.Bytes(), nil)
 }
 
 func CheckTicketExist(key Ticket) func(*bolt.Tx) error {
@@ -73,7 +80,7 @@ func Incept(
 		auth.CheckLoginNotExist(l),
 		PunchTicket(key),
 		users.Create(&(l.User)),
-		auth.Create(l),
+		auth.Create(l, uuid.NewV4()),
 	)); err != nil {
 		return err
 	}

@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	uuid "github.com/satori/go.uuid"
 	"github.com/synapse-garden/sg-proto/incept"
 	"github.com/synapse-garden/sg-proto/store"
 	sgt "github.com/synapse-garden/sg-proto/testing"
@@ -39,17 +40,9 @@ func (s *InceptSuite) TearDownTest(c *C) {
 }
 
 func (s *InceptSuite) TestingNewTicket(c *C) {
-	var tkt incept.Ticket
-	var err error
+	tkt := incept.Ticket(uuid.NewV4())
 	c.Assert(s.db.View(assertNoTickets(c)), IsNil)
-	c.Assert(s.db.Update(func(tx *bolt.Tx) error {
-		tkt, err = incept.NewTicket(tx)
-		if err != nil {
-			return err
-		}
-		c.Logf("ticket acquired: %#q", tkt.String())
-		return nil
-	}), IsNil)
+	c.Assert(s.db.Update(incept.NewTicket(tkt)), IsNil)
 	c.Assert(s.db.View(assertTicketsExist(c, tkt)), IsNil)
 }
 
