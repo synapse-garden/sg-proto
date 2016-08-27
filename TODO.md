@@ -37,6 +37,7 @@
 - [ ] Some kind of psych features
 - [ ] Make a decision on Rust
 - [ ] Switch to encoding/gob instead of JSON on the backend
+- [ ] Store tests
 
 # v0.0.1
 
@@ -50,16 +51,23 @@
 - [x] Fix Windows startup BoltDB panic (nil transaction or db?)
 - [x] Fix panic in rest.Incept
 
+## Login / Session
+
+- [ ] auth.Session API?
+- [ ] auth.Login tests
+- [ ] Delineate split between account (users.User) and auth.Login
+
 ## Account
 
 - [ ] incept.PunchTicket
-- [ ] Ticket API
-- [ ] Password hash
+- [x] Ticket API
+- [x] Password hash
 - [ ] Secure ticket "incept" endpoint
-- [ ] Create user
+- [x] Create user
 - [ ] Log in
 - [ ] Log out
 - [ ] Have bounty
+- [ ] Test rest.Incept auth.Login creation
 
 ## Chat
 
