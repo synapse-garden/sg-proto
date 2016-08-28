@@ -67,7 +67,7 @@
 
 - [ ] auth.Session API?
 - [ ] auth.Login tests
-- [ ] Delineate split between account (users.User) and auth.Login
+- [x] Delineate split between account (users.User) and auth.Login
 
 ## Account
 
