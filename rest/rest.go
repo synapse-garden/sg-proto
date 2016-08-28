@@ -32,7 +32,7 @@ import (
 type API func(*httprouter.Router, *bolt.DB) error
 
 // Bind binds the API on the given DB.  It sets up REST endpoints as needed.
-func Bind(source *SourceInfo, db *bolt.DB) (*httprouter.Router, error) {
+func Bind(db *bolt.DB, source *SourceInfo) (*httprouter.Router, error) {
 	if err := db.Update(store.Prep(
 		incept.TicketBucket,
 		users.UserBucket,

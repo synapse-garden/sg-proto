@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"log"
-	"net/http"
 
 	"github.com/synapse-garden/sg-proto/rest"
 
@@ -19,9 +18,13 @@ var (
 	KeyFile  = flag.String("key", "cert.key", "the certificate key to use")
 	ConfFile = flag.String("cfg", "conf.toml", "the config file to use")
 
-	SourceLocation = flag.String("source", "https://github.com/synapse-garden/sg-proto", "where the source is hosted")
+	SourceLocation = flag.String(
+		"source",
+		"https://github.com/synapse-garden/sg-proto",
+		"where the source is hosted",
+	)
 
-	Dev = flag.Bool("dev", false, "start in developer mode")
+	DevMode = flag.Bool("dev", false, "start in developer mode")
 )
 
 const (
@@ -32,7 +35,7 @@ const (
 func main() {
 	flag.Parse()
 
-	DB, err := bolt.Open(*DBAddr, 0600, nil)
+	db, err := bolt.Open(*DBAddr, 0600, nil)
 	if err != nil {
 		log.Fatalf("unable to open Bolt database: %s", err.Error())
 	}
@@ -44,33 +47,15 @@ func main() {
 	}
 
 	switch {
-	case *SourceLocation == "" && !*Dev:
+	case *SourceLocation == "" && !*DevMode:
 		log.Fatal("must provide a source location using -source")
+	case *DevMode && *CertFile == "":
+		devServeInsecure(db, *Address, *Port, source)
+	case *DevMode:
+		devServeSecure(db, *Address, *Port, *CertFile, *KeyFile, source)
 	case *CertFile == "":
-		log.Printf(
-			"SG Proto hosting INSECURELY at http://%s%s",
-			*Address, *Port,
-		)
-		router, err := rest.Bind(source, DB)
-		if err != nil {
-			log.Fatalf("failed to bind on DB: %s", err.Error())
-		}
-		log.Fatal(http.ListenAndServe(*Address+*Port, router))
+		serveInsecure(db, *Address, *Port, source)
+	default:
+		serveSecure(db, *Address, *Port, *CertFile, *KeyFile, source)
 	}
-
-	log.Printf(
-		"SG Proto hosting securely at https://%s%s",
-		*Address, *Port,
-	)
-	router, err := rest.Bind(source, DB)
-	if err != nil {
-		log.Fatalf("failed to bind on DB: %s", err.Error())
-	}
-
-	log.Fatal(http.ListenAndServeTLS(
-		*Address+*Port,
-		*CertFile,
-		*KeyFile,
-		router,
-	))
 }
