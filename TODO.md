@@ -59,7 +59,7 @@
 
 ## Bugs
 
-- [x] Fix Windows timestamp UUID generation (use uuid.NewV5)
+- [x] Fix Windows timestamp UUID generation (use uuid.NewV4)
 - [x] Fix Windows startup BoltDB panic (nil transaction or db?)
 - [x] body of POST to /incept/:ticket must include pwhash field
 
