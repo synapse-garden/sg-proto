@@ -42,6 +42,7 @@
 - [ ] Make a call about frontend hashing.  Do we really want to?
       Not really secure unless salted, and even then it's "just another password".
 - [ ] https://cdn.jsdelivr.net/sjcl/1.0.4/sjcl.js for browser
+      http://jsfiddle.net/kRcNK/40/
 
 # v0.0.1
 
