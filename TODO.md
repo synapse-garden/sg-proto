@@ -49,7 +49,7 @@
 
 - [ ] Specify me
 - [ ] No database?
-- [ ] Use given mock file as backend?
+- [ ] Use given mock file as initial store?
 - [ ] Expose endpoints without sessions?
 - [ ] Default superuser logins given?
 
