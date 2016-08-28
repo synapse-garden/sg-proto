@@ -39,8 +39,19 @@
 - [ ] Make a decision on Rust
 - [ ] Switch to encoding/gob instead of JSON on the backend
 - [ ] Store tests
+- [ ] Make a call about frontend hashing.  Do we really want to?
+      Not really secure unless salted, and even then it's "just another password".
+- [ ] https://cdn.jsdelivr.net/sjcl/1.0.4/sjcl.js for browser
 
 # v0.0.1
+
+## Dev mode
+
+- [ ] Specify me
+- [ ] No database?
+- [ ] Use given mock file as backend?
+- [ ] Expose endpoints without sessions?
+- [ ] Default superuser logins given?
 
 ## GPL
 
