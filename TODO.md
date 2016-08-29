@@ -34,6 +34,7 @@
 
 # v0.1.0
 
+- [x] Standardize on JSON camelCase vs snake_case etc
 - [ ] Poms / some kind of work measure
 - [ ] Some kind of psych features
 - [ ] Make a decision on Rust
