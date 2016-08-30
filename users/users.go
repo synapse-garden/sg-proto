@@ -1,7 +1,6 @@
 package users
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/synapse-garden/sg-proto/store"
@@ -48,13 +47,7 @@ func CheckUserNotExist(u *User) func(*bolt.Tx) error {
 // Create returns a writing transaction which checks that the user has
 // not yet been created, then Puts its JSON representation in UserBucket.
 func Create(u *User) func(*bolt.Tx) error {
-	return func(tx *bolt.Tx) error {
-		bs, err := json.Marshal(u)
-		if err != nil {
-			return err
-		}
-		return store.Put(UserBucket, []byte(u.Name), bs)(tx)
-	}
+	return store.Marshal(UserBucket, u, []byte(u.Name))
 }
 
 // ValidateNew validates a new User.
