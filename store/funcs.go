@@ -18,6 +18,16 @@ func Delete(b Bucket, key []byte) func(*bolt.Tx) error {
 	}
 }
 
+func Marshal(b Bucket, from interface{}, key []byte) func(*bolt.Tx) error {
+	return func(tx *bolt.Tx) error {
+		bs, err := json.Marshal(from)
+		if err != nil {
+			return err
+		}
+		return Put(b, key, bs)(tx)
+	}
+}
+
 func Unmarshal(b Bucket, to interface{}, key []byte) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
 		if bs := tx.Bucket(b).Get(key); bs != nil {
