@@ -36,6 +36,8 @@ func Bind(db *bolt.DB, source *SourceInfo) (*httprouter.Router, error) {
 		incept.TicketBucket,
 		users.UserBucket,
 		auth.LoginBucket,
+		auth.SessionBucket,
+		auth.RefreshBucket,
 	)); err != nil {
 		return nil, err
 	}
@@ -43,6 +45,7 @@ func Bind(db *bolt.DB, source *SourceInfo) (*httprouter.Router, error) {
 	for _, api := range []API{
 		Source(source),
 		Incept,
+		Token,
 	} {
 		if err := api(htr, db); err != nil {
 			return nil, err
