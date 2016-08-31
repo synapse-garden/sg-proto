@@ -54,6 +54,7 @@
 ## Code quality / package sanitation
 
 - [ ] Comment all exported functions, types, methods, and constants
+- [ ] Make sure not just anyone can get a refresh token
 
 ## Dev mode
 
@@ -77,6 +78,7 @@
 
 - [x] auth.Session API
 - [ ] auth.Login tests
+- [ ] Invalidate / reissue auth token after refresh
 - [x] Delineate split between account (users.User) and auth.Login
 
 ## Account
