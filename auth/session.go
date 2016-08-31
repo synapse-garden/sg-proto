@@ -9,16 +9,34 @@ import (
 	"github.com/synapse-garden/sg-proto/store"
 )
 
-// Expiration is how long a session takes to expire.
-const Expiration = 5 * time.Minute
-
 type TokenType int
 
-const Bearer TokenType = iota
+const (
+	BearerType TokenType = iota
+	RefreshType
+
+	Expiration = 5 * time.Minute
+)
+
+func (t TokenType) String() string {
+	return tokenNames[t]
+}
+
+func ValidType(t string) bool {
+	return tokenTypes[t]
+}
 
 var (
 	SessionBucket = store.Bucket("sessions")
 	RefreshBucket = store.Bucket("refresh")
+
+	tokenNames = map[TokenType]string{
+		BearerType: "Bearer",
+	}
+
+	tokenTypes = map[string]bool{
+		"Bearer": true,
+	}
 )
 
 type Token []byte
@@ -44,9 +62,11 @@ type Session struct {
 	RefreshToken Token         `json:"refresh_token"`
 }
 
-func NewToken(t TokenType) []byte {
+func NewToken(t TokenType) Token {
 	switch t {
-	case Bearer:
+	case BearerType:
+		return uuid.NewV4().Bytes()
+	case RefreshType:
 		return uuid.NewV4().Bytes()
 	}
 
@@ -97,6 +117,10 @@ func Refresh(
 	}
 }
 
+func CheckRefresh(t Token) func(*bolt.Tx) error {
+	return store.CheckExists(RefreshBucket, t)
+}
+
 // CheckToken attempts to load the given Token's Session from the
 // Sessions bucket.  If it was missing, it returns ErrMissingSession.
 // If it was expired, it returns ErrTokenExpired.  This functionality
@@ -104,25 +128,24 @@ func Refresh(
 // user should not be trusted with the knowledge that a given token ever
 // existed.  From the REST API user's point of view, an expired session
 // with an invalid refresh token simply does not exist.
-func CheckToken(s *Session) func(*bolt.Tx) error {
+func CheckToken(t Token) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
 		var (
 			now      = time.Now().UTC()
-			key      = s.Token
 			existent = new(Session)
 		)
-		err := store.Unmarshal(SessionBucket, existent, key)(tx)
+		err := store.Unmarshal(SessionBucket, existent, t)(tx)
 
 		switch {
 		case store.IsMissing(err):
 			// The session was not found.
-			return ErrMissingSession(key)
+			return ErrMissingSession(t)
 		case err != nil:
 			// There was an unknown error.
 			return err
 		case existent.Expiration.Before(now):
 			// The token has already expired.
-			return ErrTokenExpired(key)
+			return ErrTokenExpired(t)
 		}
 
 		return nil
@@ -133,14 +156,13 @@ func CheckToken(s *Session) func(*bolt.Tx) error {
 // stores them in the database, or returns any error.
 func NewSession(
 	s *Session,
-	expires time.Time,
+	expiration time.Time,
 	validFor time.Duration,
 	token, refresh Token,
 ) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) (err error) {
 		var (
-			expiration = expires.Add(validFor)
-			kind       = Bearer
+			kind = BearerType
 
 			oldToken, oldRefresh = s.Token, s.RefreshToken
 			oldExpiration        = s.Expiration
@@ -148,11 +170,9 @@ func NewSession(
 			oldType              = s.TokenType
 		)
 
-		s.Token = token
-		s.RefreshToken = refresh
+		s.Token, s.RefreshToken = token, refresh
 		s.TokenType = kind
-		s.Expiration = expiration
-		s.ExpiresIn = validFor
+		s.Expiration, s.ExpiresIn = expiration, validFor
 
 		defer func() {
 			if err != nil {
@@ -175,16 +195,12 @@ func NewSession(
 func DeleteSession(s *Session) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
 		err := store.Delete(SessionBucket, s.Token)(tx)
-		if store.IsMissing(err) {
-			return nil
-		} else if err != nil {
+		if err != nil && !store.IsMissing(err) {
 			return err
 		}
 
 		err = store.Delete(RefreshBucket, s.RefreshToken)(tx)
-		if store.IsMissing(err) {
-			return nil
-		} else if err != nil {
+		if err != nil && !store.IsMissing(err) {
 			return err
 		}
 		return nil
