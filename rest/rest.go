@@ -13,11 +13,10 @@ import (
 // Needed endpoints:
 //
 // Create a new user:
-//  - POST /incept :credential (returns user_id or error)
 //  - POST /incept/:credential ("magic link")
 //
 // Get a new session / login:
-//  - POST /session/:user_id :pwhash (returns session key)
+//  - POST /session/:user_id :pwhash (returns Token to be included as Authorization: Bearer)
 //  - GET  /profile (user ID inferred)
 //
 // Open a new chat socket
