@@ -17,7 +17,7 @@ func (s *AuthSuite) TestErrTokenExpiredError(c *C) {
 	c.Check(
 		auth.ErrTokenExpired("hello").Error(),
 		Equals,
-		"no such session `hello`",
+		"session `hello` expired",
 	)
 }
 
