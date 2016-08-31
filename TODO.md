@@ -1,5 +1,6 @@
 # v0.4.0 ?
 
+- [ ] Versioned REST API?
 - [ ] Distributed storage?
 - [ ] Cassandra / etc bigtable backend?
 
