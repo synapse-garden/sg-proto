@@ -72,7 +72,9 @@ func Check(l *Login) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
 		got := new(Login)
 		err := store.Unmarshal(LoginBucket, got, []byte(l.Name))(tx)
-		if err != nil {
+		if store.IsMissing(err) {
+			return ErrMissing(l.Name)
+		} else if err != nil {
 			return err
 		}
 		cmp := sha256.Sum256(append(l.PWHash, got.Salt.Bytes()...))

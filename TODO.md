@@ -48,6 +48,7 @@
 - [ ] https://cdn.jsdelivr.net/sjcl/1.0.4/sjcl.js for browser
       http://jsfiddle.net/kRcNK/40/
 - [ ] Scour for cases where Put or Marshal could fail and return credentials
+- [ ] Return x.ErrMissing, not store.ErrMissing, in Unmarshal cases
 
 # v0.0.1
 
