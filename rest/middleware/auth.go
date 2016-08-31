@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"encoding/base64"
-	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -44,8 +43,8 @@ func GetToken(kind, from string) ([]byte, error) {
 
 	bs, err := base64.StdEncoding.DecodeString(substrings[1])
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf(
-			"failed to decode %q token", kind))
+		return nil, errors.Wrapf(err,
+			"failed to decode %q token", kind)
 	}
 
 	return auth.Token(bs), nil
