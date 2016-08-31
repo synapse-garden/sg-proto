@@ -11,6 +11,7 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/julienschmidt/httprouter"
+	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -45,7 +46,7 @@ func InceptHandle(db *bolt.DB) httprouter.Handle {
 			return
 		}
 
-		err = incept.Incept(w, incept.Ticket(tkt), l, db)
+		err = incept.Incept(incept.Ticket(tkt), l, db)
 		if err != nil {
 			var status int
 			switch err.(type) {
@@ -59,6 +60,14 @@ func InceptHandle(db *bolt.DB) httprouter.Handle {
 				status = http.StatusInternalServerError
 			}
 			http.Error(w, err.Error(), status)
+			return
+		}
+
+		err = json.NewEncoder(w).Encode(l.User)
+		if err != nil {
+			http.Error(w, errors.Wrap(
+				err, "failed to marshal User").Error(),
+				http.StatusInternalServerError)
 			return
 		}
 	}

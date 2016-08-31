@@ -1,9 +1,7 @@
 package incept
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 
 	"github.com/synapse-garden/sg-proto/auth"
 	"github.com/synapse-garden/sg-proto/store"
@@ -59,7 +57,6 @@ func PunchTicket(key Ticket) func(*bolt.Tx) error {
 // does not (by name.)  Then it tries to create the given user,
 // and delete the given key.  Any error will cause this to roll back.
 func Incept(
-	w io.Writer,
 	key Ticket,
 	l *auth.Login,
 	db *bolt.DB,
@@ -85,5 +82,5 @@ func Incept(
 		return err
 	}
 
-	return json.NewEncoder(w).Encode(l.User)
+	return nil
 }
