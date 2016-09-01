@@ -1,12 +1,12 @@
 package middleware
 
 import (
-	"encoding/base64"
 	"log"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/synapse-garden/sg-proto/admin"
 	"github.com/synapse-garden/sg-proto/auth"
 	"github.com/synapse-garden/sg-proto/store"
 
@@ -41,16 +41,10 @@ func GetToken(kind, from string) ([]byte, error) {
 			AuthHeader, kind)
 	}
 
-	bs, err := base64.StdEncoding.DecodeString(substrings[1])
-	if err != nil {
-		return nil, errors.Wrapf(err,
-			"failed to decode %q token", kind)
-	}
-
-	return auth.Token(bs), nil
+	return auth.DecodeToken(substrings[1])
 }
 
-func Auth(h httprouter.Handle, db *bolt.DB) httprouter.Handle {
+func AuthUser(h httprouter.Handle, db *bolt.DB) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		// Is an authorized key in the header?
 		token, err := GetToken(
@@ -123,5 +117,32 @@ func Auth(h httprouter.Handle, db *bolt.DB) httprouter.Handle {
 			return
 		}
 
+	}
+}
+
+func AuthAdmin(h httprouter.Handle, db *bolt.DB) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		// Is an authorized key in the header?
+		token, err := GetToken(
+			"Admin",
+			r.Header.Get(string(AuthHeader)),
+		)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		err = db.View(admin.CheckToken(token))
+		if err != nil {
+
+			switch err.(type) {
+			case admin.ErrNotFound:
+				http.Error(w, err.Error(), http.StatusUnauthorized)
+			default:
+				http.Error(w, errors.Wrap(err, "error authorizing admin API key").Error(), http.StatusInternalServerError)
+			}
+			return
+		}
+
+		h(w, r, ps)
 	}
 }

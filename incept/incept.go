@@ -49,6 +49,18 @@ func CheckTicketExist(key Ticket) func(*bolt.Tx) error {
 	}
 }
 
+func DeleteTickets(ts ...Ticket) func(*bolt.Tx) error {
+	return func(tx *bolt.Tx) error {
+		for _, t := range ts {
+			err := store.Delete(TicketBucket, t.Bytes())(tx)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+}
+
 func PunchTicket(key Ticket) func(*bolt.Tx) error {
 	return store.Delete(TicketBucket, key.Bytes())
 }

@@ -48,7 +48,7 @@ func (s *MiddlewareSuite) TearDownTest(c *C) {
 	}
 }
 
-func (s *MiddlewareSuite) TestAuth(c *C) {
+func (s *MiddlewareSuite) TestAuthUser(c *C) {
 	sess := &auth.Session{}
 	c.Assert(s.db.Update(auth.NewSession(
 		sess,
@@ -66,7 +66,7 @@ func (s *MiddlewareSuite) TestAuth(c *C) {
 		w.Write([]byte("ok"))
 	}
 	w := htt.NewRecorder()
-	middleware.Auth(h, s.db)(w, r, nil)
+	middleware.AuthUser(h, s.db)(w, r, nil)
 	c.Check(w.Body.String(), Equals, "ok")
 	// A request to an endpoint with the given auth scheme should
 	// be rejected if header["Authorization"] is not "Bearer" and
@@ -93,8 +93,8 @@ func (s *MiddlewareSuite) TestGetToken(c *C) {
 			`header "Authorization"`,
 	}, {
 		given: "Bearer 12345",
-		expectErr: `failed to decode "Bearer" token: illegal ` +
-			`base64 data at input byte 4`,
+		expectErr: "invalid token `12345`: illegal base64 " +
+			"data at input byte 4",
 	}, {
 		given:  "Bearer " + validBase64,
 		expect: validToken,

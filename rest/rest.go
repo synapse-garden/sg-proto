@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"github.com/synapse-garden/sg-proto/admin"
 	"github.com/synapse-garden/sg-proto/auth"
 	"github.com/synapse-garden/sg-proto/incept"
 	"github.com/synapse-garden/sg-proto/store"
@@ -15,8 +16,8 @@ import (
 // Admin:
 //  - Admin auth middleware??  Or always send admin account info?  Or
 //    simply have admin API key from CLI for now?
-//  - POST /tickets
-//  - DELETE /tickets/:credential
+//  - POST /admin/tickets
+//  - DELETE /admin/tickets/:credential
 //
 // Create a new user:
 //  - POST /incept/:credential ("magic link")
@@ -41,8 +42,13 @@ import (
 type API func(*httprouter.Router, *bolt.DB) error
 
 // Bind binds the API on the given DB.  It sets up REST endpoints as needed.
-func Bind(db *bolt.DB, source *SourceInfo) (*httprouter.Router, error) {
+func Bind(
+	db *bolt.DB,
+	source *SourceInfo,
+	apiKey auth.Token,
+) (*httprouter.Router, error) {
 	if err := db.Update(store.Prep(
+		admin.AdminBucket,
 		incept.TicketBucket,
 		users.UserBucket,
 		auth.LoginBucket,
@@ -54,6 +60,7 @@ func Bind(db *bolt.DB, source *SourceInfo) (*httprouter.Router, error) {
 	htr := httprouter.New()
 	for _, api := range []API{
 		Source(source),
+		Admin(apiKey),
 		Incept,
 		Token,
 	} {

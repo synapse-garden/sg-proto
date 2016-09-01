@@ -12,6 +12,22 @@ func Put(b Bucket, key, val []byte) func(*bolt.Tx) error {
 	}
 }
 
+func Get(b Bucket, key []byte) func(*bolt.Tx) ([]byte, error) {
+	return func(tx *bolt.Tx) ([]byte, error) {
+		result := tx.Bucket(b).Get(key)
+		switch {
+		case result == nil:
+			return nil, &MissingError{
+				Key:    key,
+				Bucket: b,
+			}
+		case len(result) == 0:
+			return []byte{}, nil
+		}
+		return result[:], nil
+	}
+}
+
 func Delete(b Bucket, key []byte) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
 		return tx.Bucket(b).Delete(key)
