@@ -12,12 +12,22 @@ import (
 
 // Needed endpoints:
 //
+// Admin:
+//  - Admin auth middleware??  Or always send admin account info?  Or
+//    simply have admin API key from CLI for now?
+//  - POST /tickets
+//  - DELETE /tickets/:credential
+//
 // Create a new user:
 //  - POST /incept/:credential ("magic link")
 //
 // Get a new session / login:
 //  - POST /session/:user_id :pwhash (returns Token to be included as Authorization: Bearer)
-//  - GET  /profile (user ID inferred)
+//
+// User account
+//  - GET  /profile (user ID inferred) => /users/:id
+//  - PUT  /profile
+//  - DELETE /profile => delete user account and any logins
 //
 // Open a new chat socket
 //  - GET /chat/:user_id

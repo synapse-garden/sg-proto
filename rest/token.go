@@ -15,6 +15,8 @@ import (
 
 func Token(r *htr.Router, db *bolt.DB) error {
 	r.POST("/tokens", HandleToken(db))
+	// TODO: r.DELETE("/tokens", HandleLogoutUser(db))
+	r.DELETE("/tokens/:token", HandleDeleteToken(db))
 
 	return nil
 }
@@ -63,6 +65,46 @@ func HandleToken(db *bolt.DB) htr.Handle {
 				err, "failed to create new session",
 			).Error(), http.StatusInternalServerError)
 
+			return
+		}
+	}
+}
+
+func HandleDeleteToken(db *bolt.DB) htr.Handle {
+	return func(w http.ResponseWriter, r *http.Request, ps htr.Params) {
+		token, err := auth.DecodeToken(ps.ByName("token"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		}
+
+		// len == 0 case handled by other handler
+		if err = db.View(auth.CheckToken(token)); err != nil {
+			var code int
+			switch err.(type) {
+			case auth.ErrMissingSession, auth.ErrTokenExpired:
+				code = http.StatusNotFound
+			default:
+				code = http.StatusInternalServerError
+			}
+
+			http.Error(w, err.Error(), code)
+			return
+		}
+
+		if err := db.Update(auth.DeleteToken(token)); err != nil {
+			var code int
+			switch err.(type) {
+			case auth.ErrMissingSession:
+				code = http.StatusNotFound
+			default:
+				// Something weird happened.  Maybe you already logged out.
+				code = http.StatusInternalServerError
+				log.Printf("Token: %#v\nCheckToken "+
+					"passed but DeleteToken "+
+					"failed: %#v", token, err)
+			}
+
+			http.Error(w, err.Error(), code)
 			return
 		}
 	}

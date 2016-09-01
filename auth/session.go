@@ -1,12 +1,15 @@
 package auth
 
 import (
+	"encoding/base64"
 	"fmt"
 	"time"
 
-	"github.com/boltdb/bolt"
-	uuid "github.com/satori/go.uuid"
 	"github.com/synapse-garden/sg-proto/store"
+
+	"github.com/boltdb/bolt"
+	"github.com/pkg/errors"
+	uuid "github.com/satori/go.uuid"
 )
 
 type TokenType int
@@ -60,6 +63,14 @@ type Session struct {
 	Expiration   time.Time     `json:"expires_at,omitempty"`
 	TokenType    TokenType     `json:"token_type"`
 	RefreshToken Token         `json:"refresh_token"`
+}
+
+func DecodeToken(tStr string) (Token, error) {
+	tBytes, err := base64.StdEncoding.DecodeString(tStr)
+	if err != nil {
+		return nil, errors.Wrapf(err, "invalid token %#q", tStr)
+	}
+	return Token(tBytes), nil
 }
 
 func NewToken(t TokenType) Token {
@@ -189,6 +200,17 @@ func NewSession(
 			return
 		}
 		return store.Put(RefreshBucket, s.RefreshToken, nil)(tx)
+	}
+}
+
+func DeleteToken(t Token) func(*bolt.Tx) error {
+	return func(tx *bolt.Tx) error {
+		err := store.Delete(SessionBucket, t)(tx)
+		if store.IsMissing(err) {
+			return ErrMissingSession(t)
+		}
+
+		return err
 	}
 }
 
