@@ -10,7 +10,7 @@
 - [ ] Concurrent store.Wrap?
 - [ ] Concurrent store.Wrap with dep chains?
 - [ ] Dep chains?
-- [ ] DB interface?
+- [ ] DB interface + cache?
 - [ ] Optimize buckets / transactions in packages?  Pass needed behaviors
    through store package?  NewTickets, etc. inefficient
 - [ ] Store.WrapBucket(store.Bucket(...), ...Transact)
@@ -42,7 +42,7 @@
 - [ ] Poms / some kind of work measure
 - [ ] Some kind of psych features
 - [ ] Make a decision on Rust
-- [ ] Switch to encoding/gob instead of JSON on the backend
+- [ ] Switch to encoding/gob instead of JSON on the backend and benchmark it
 - [ ] Store tests
 - [ ] Make a call about frontend hashing.  Do we really want to?
       Not really secure unless salted, and even then it's "just another password".
@@ -50,8 +50,17 @@
       http://jsfiddle.net/kRcNK/40/
 - [ ] Scour for cases where Put or Marshal could fail and return credentials
 - [ ] Return x.ErrMissing, not store.ErrMissing, in Unmarshal cases
+- [ ] User logout by uname + pwhash (DELETE /tokens ?)
+  - [ ] Lookup from username to session
 
 # v0.0.1
+
+## Admin API
+
+- [ ] Create ticket
+- [ ] Delete ticket
+- [ ] Master API key printed on startup?
+  - [ ] Use own API key via config?
 
 ## Code quality / package sanitation
 
@@ -82,6 +91,7 @@
 - [ ] auth.Login tests
 - [ ] Invalidate / reissue auth token after refresh
 - [x] Delineate split between account (users.User) and auth.Login
+- [x] Session auth middleware
 
 ## Account
 
@@ -89,10 +99,10 @@
 - [x] Ticket API
 - [x] Password hash
 - [x] Create user
-- [ ] Log in
-- [ ] Log out
+- [x] Log in
+- [x] Log out
 - [ ] Have bounty
-- [ ] Test rest.Incept auth.Login creation
+- [x] Test rest.Incept auth.Login creation
 
 ## Chat
 
