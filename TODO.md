@@ -55,8 +55,18 @@
 
 # v0.0.1
 
+## Bugs
+
+- [x] Fix Windows timestamp UUID generation (use uuid.NewV4)
+- [x] Fix Windows startup BoltDB panic (nil transaction or db?)
+- [x] body of POST to /incept/:ticket must include pwhash field
+- [ ] AuthAdmin expects base64 hashed sha256 of auth.Token (uuid Bytes)
+- [ ] Admin API key stored insecurely, must hash + salt first
+  - [ ] Report base64 encoded value
+
 ## Admin API
 
+- [ ] AuthAdmin middleware
 - [ ] Create ticket
 - [ ] Delete ticket
 - [ ] Master API key printed on startup?
@@ -78,12 +88,6 @@
 ## GPL
 
 - [x] Host own source code under /source or some such.
-
-## Bugs
-
-- [x] Fix Windows timestamp UUID generation (use uuid.NewV4)
-- [x] Fix Windows startup BoltDB panic (nil transaction or db?)
-- [x] body of POST to /incept/:ticket must include pwhash field
 
 ## Login / Session
 
