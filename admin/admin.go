@@ -30,6 +30,14 @@ func NewToken(token auth.Token) func(*bolt.Tx) error {
 	)
 }
 
+func CheckExists(tx *bolt.Tx) error {
+	err := store.CheckExists(AdminBucket, []byte("token"))(tx)
+	if store.IsMissing(err) {
+		return ErrNotFound([]byte(""))
+	}
+	return err
+}
+
 func CheckToken(token auth.Token) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
 		var salt []byte

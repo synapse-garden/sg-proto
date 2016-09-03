@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -20,8 +21,25 @@ import (
 
 func Admin(token auth.Token) API {
 	return func(r *htr.Router, db *bolt.DB) error {
-		if err := db.Update(admin.NewToken(token)); err != nil {
-			return err
+		if token != nil {
+			// User wants a new token.
+			err := db.Update(admin.NewToken(token))
+			if err != nil {
+				return err
+			}
+		} else if err := db.View(admin.CheckExists); err != nil {
+			switch err.(type) {
+			case admin.ErrNotFound:
+				newToken := auth.Token(uuid.NewV4().Bytes())
+				log.Printf("new admin key generated: %#q",
+					base64.StdEncoding.EncodeToString(newToken))
+				err = db.Update(admin.NewToken(newToken))
+				if err != nil {
+					return err
+				}
+			default:
+				return errors.Wrap(err, "failed to check for existing admin key")
+			}
 		}
 
 		r.POST("/admin/tickets", mw.AuthAdmin(HandleNewTicket(db), db))

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"flag"
 	"log"
 
@@ -19,7 +20,6 @@ var (
 	CertFile = flag.String("cert", "", "the certificate file to use")
 	KeyFile  = flag.String("key", "cert.key", "the certificate key to use")
 	ConfFile = flag.String("cfg", "conf.toml", "the config file to use")
-	AdminKey = flag.String("api-key", uuid.NewV4().String(), "the admin API key to use")
 
 	SourceLocation = flag.String(
 		"source",
@@ -27,7 +27,8 @@ var (
 		"where the source is hosted",
 	)
 
-	DevMode = flag.Bool("dev", false, "start in developer mode")
+	DevMode  = flag.Bool("dev", false, "start in developer mode")
+	RegenKey = flag.Bool("regen-key", false, "re-create the admin key")
 )
 
 // Source constants
@@ -50,26 +51,22 @@ func main() {
 		LicensedTo: Licensee,
 	}
 
-	if len(*AdminKey) == 0 {
-		log.Fatal("must provide a valid api-key UUID")
+	var key auth.Token
+	if *RegenKey {
+		key = auth.Token(uuid.NewV4().Bytes())
+		log.Printf("new admin key generated: %#q",
+			base64.StdEncoding.EncodeToString(key))
 	}
-	apiUUID, err := uuid.FromString(*AdminKey)
-	if err != nil {
-		log.Fatalf("invalid API key %#q, provide a UUID string: %s", *AdminKey, err.Error())
-	}
-	token := auth.Token(apiUUID.Bytes())
-
-	log.Printf("admin api key: %#q", *AdminKey)
 	switch {
 	case *SourceLocation == "" && !*DevMode:
 		log.Fatal("must provide a source location using -source")
 	case *DevMode && *CertFile == "":
-		devServeInsecure(db, token, *Address, *Port, source)
+		devServeInsecure(db, key, *Address, *Port, source)
 	case *DevMode:
-		devServeSecure(db, token, *Address, *Port, *CertFile, *KeyFile, source)
+		devServeSecure(db, key, *Address, *Port, *CertFile, *KeyFile, source)
 	case *CertFile == "":
-		serveInsecure(db, token, *Address, *Port, source)
+		serveInsecure(db, key, *Address, *Port, source)
 	default:
-		serveSecure(db, token, *Address, *Port, *CertFile, *KeyFile, source)
+		serveSecure(db, key, *Address, *Port, *CertFile, *KeyFile, source)
 	}
 }

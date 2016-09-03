@@ -16,12 +16,12 @@ func serveInsecure(
 	addr, port string,
 	source *rest.SourceInfo,
 ) {
-	log.Printf("SG Proto serving INSECURELY at http://%s%s", addr, port)
 	router, err := rest.Bind(db, source, apiKey)
 	if err != nil {
 		log.Fatalf("failed to bind on DB: %s", err.Error())
 	}
 
+	log.Printf("SG Proto serving INSECURELY at http://%s%s", addr, port)
 	log.Fatal(http.ListenAndServe(addr+port, router))
 }
 
@@ -31,12 +31,12 @@ func serveSecure(
 	addr, port, cert, key string,
 	source *rest.SourceInfo,
 ) {
-	log.Printf("SG Proto serving at https://%s%s", addr, port)
 	router, err := rest.Bind(db, source, apiKey)
 	if err != nil {
 		log.Fatalf("failed to bind on DB: %s", err.Error())
 	}
 
+	log.Printf("SG Proto serving at https://%s%s", addr, port)
 	log.Fatal(http.ListenAndServeTLS(
 		addr+port,
 		cert, key,
@@ -50,13 +50,13 @@ func devServeInsecure(
 	addr, port string,
 	source *rest.SourceInfo,
 ) {
-	log.Printf("SG Proto serving INSECURELY in dev mode at "+
-		"http://%s%s", addr, port)
 	router, err := rest.Bind(db, source, apiKey)
 	if err != nil {
 		log.Fatalf("failed to bind on DB: %s", err.Error())
 	}
 
+	log.Printf("SG Proto serving INSECURELY in dev mode at "+
+		"http://%s%s", addr, port)
 	log.Fatal(http.ListenAndServe(addr+port, router))
 }
 
@@ -66,15 +66,13 @@ func devServeSecure(
 	addr, port, cert, key string,
 	source *rest.SourceInfo,
 ) {
-	log.Printf(
-		"SG Proto hosting in dev mode at https://%s%s",
-		addr, port,
-	)
 	router, err := rest.Bind(db, source, apiKey)
 	if err != nil {
 		log.Fatalf("failed to bind on DB: %s", err.Error())
 	}
 
+	log.Printf("SG Proto hosting in dev mode at https://%s%s",
+		addr, port)
 	log.Fatal(http.ListenAndServeTLS(
 		addr+port,
 		cert, key,

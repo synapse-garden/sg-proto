@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/synapse-garden/sg-proto/auth"
@@ -72,9 +73,18 @@ func HandleToken(db *bolt.DB) htr.Handle {
 
 func HandleDeleteToken(db *bolt.DB) htr.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps htr.Params) {
-		token, err := auth.DecodeToken(ps.ByName("token"))
+		escaped := ps.ByName("token")
+		unescaped, err := url.QueryUnescape(escaped)
+		if err != nil {
+			http.Error(w, errors.Wrapf(
+				err, "token not URL-escaped", escaped,
+			).Error(), http.StatusBadRequest)
+			return
+		}
+		token, err := auth.DecodeToken(unescaped)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 
 		// len == 0 case handled by other handler
