@@ -41,6 +41,14 @@
 
 - [ ] Users can't understand missing session Error() string since it's bytes
 
+## Dev mode
+
+- [ ] Specify me
+- [ ] No database?
+- [ ] Use given mock file as initial store?
+- [ ] Expose endpoints without sessions?
+- [ ] Default superuser logins given?
+
 ## Unorganized
 
 - [x] Standardize on JSON camelCase vs snake_case etc
@@ -84,14 +92,6 @@
 
 - [ ] Comment all exported functions, types, methods, and constants
 - [ ] Make sure not just anyone can get a refresh token
-
-## Dev mode
-
-- [ ] Specify me
-- [ ] No database?
-- [ ] Use given mock file as initial store?
-- [ ] Expose endpoints without sessions?
-- [ ] Default superuser logins given?
 
 ## GPL
 
