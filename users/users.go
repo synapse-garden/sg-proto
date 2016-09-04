@@ -50,6 +50,10 @@ func Create(u *User) func(*bolt.Tx) error {
 	return store.Marshal(UserBucket, u, []byte(u.Name))
 }
 
+func Delete(u *User) func(*bolt.Tx) error {
+	return store.Delete(UserBucket, []byte(u.Name))
+}
+
 // ValidateNew validates a new User.
 func ValidateNew(u *User) error {
 	switch {

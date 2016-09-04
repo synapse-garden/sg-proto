@@ -102,3 +102,7 @@ func Create(l *Login, salt uuid.UUID) func(*bolt.Tx) error {
 		return store.Put(LoginBucket, []byte(l.Name), bs)(tx)
 	}
 }
+
+func Delete(l *Login) func(*bolt.Tx) error {
+	return store.Delete(LoginBucket, []byte(l.Name))
+}

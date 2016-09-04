@@ -64,6 +64,7 @@ func Bind(
 		Admin(apiKey),
 		Incept,
 		Token,
+		Profile,
 	} {
 		if err := api(htr, db); err != nil {
 			return nil, err
