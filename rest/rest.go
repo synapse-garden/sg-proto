@@ -54,6 +54,7 @@ func Bind(
 		auth.LoginBucket,
 		auth.SessionBucket,
 		auth.RefreshBucket,
+		auth.ContextBucket,
 	)); err != nil {
 		return nil, err
 	}

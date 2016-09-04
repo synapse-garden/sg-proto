@@ -111,13 +111,15 @@
 
 - [x] auth.Session API
 - [ ] auth.Login tests
-- [ ] Invalidate / reissue auth token after refresh
 - [x] Delineate split between account (users.User) and auth.Login
 - [x] Session auth middleware
 - [ ] Test HandleDeleteToken (URL encoding, etc.)
+- [x] Session key => session context (user ID, etc.) lookup
 
 ## Account
 
+- [x] GET /profile
+- [x] DELETE /profile
 - [ ] incept.PunchTicket
 - [x] Ticket API
 - [x] Password hash

@@ -170,6 +170,7 @@ func NewSession(
 	expiration time.Time,
 	validFor time.Duration,
 	token, refresh Token,
+	userID string,
 ) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) (err error) {
 		var (
@@ -199,6 +200,16 @@ func NewSession(
 		if err != nil {
 			return
 		}
+
+		err = SaveContext(&Context{
+			Token:        s.Token,
+			RefreshToken: s.RefreshToken,
+			UserID:       userID,
+		})(tx)
+		if err != nil {
+			return
+		}
+
 		return store.Put(RefreshBucket, s.RefreshToken, nil)(tx)
 	}
 }

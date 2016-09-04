@@ -36,6 +36,7 @@ func (s *MiddlewareSuite) SetUpTest(c *C) {
 		store.SetupBuckets(
 			auth.SessionBucket,
 			auth.RefreshBucket,
+			auth.ContextBucket,
 		),
 	)), IsNil)
 	s.db, s.tmpDir = db, tmpDir
@@ -56,6 +57,7 @@ func (s *MiddlewareSuite) TestAuthUser(c *C) {
 		time.Hour,
 		auth.NewToken(auth.BearerType),
 		auth.NewToken(auth.RefreshType),
+		"friendo",
 	)), IsNil)
 
 	validToken := base64.StdEncoding.EncodeToString(sess.Token)
@@ -63,10 +65,11 @@ func (s *MiddlewareSuite) TestAuthUser(c *C) {
 	r := htt.NewRequest("GET", "/foo", nil)
 	r.Header.Set(string(middleware.AuthHeader), fmt.Sprintf("%s %s", auth.BearerType, validToken))
 	h := func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		c.Check(middleware.CtxGetUserID(r), Equals, "friendo")
 		w.Write([]byte("ok"))
 	}
 	w := htt.NewRecorder()
-	middleware.AuthUser(h, s.db)(w, r, nil)
+	middleware.AuthUser(h, s.db, middleware.CtxSetUserID)(w, r, nil)
 	c.Check(w.Body.String(), Equals, "ok")
 	// A request to an endpoint with the given auth scheme should
 	// be rejected if header["Authorization"] is not "Bearer" and

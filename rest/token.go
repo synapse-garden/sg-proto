@@ -52,6 +52,7 @@ func HandleToken(db *bolt.DB) htr.Handle {
 			auth.Expiration,
 			auth.NewToken(auth.BearerType),
 			auth.NewToken(auth.RefreshType),
+			l.Name,
 		)); err != nil {
 			http.Error(w, errors.Wrap(
 				err, "failed to create new session",

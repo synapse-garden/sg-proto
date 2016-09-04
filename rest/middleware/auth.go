@@ -44,7 +44,7 @@ func GetToken(kind, from string) ([]byte, error) {
 	return auth.DecodeToken(substrings[1])
 }
 
-func AuthUser(h httprouter.Handle, db *bolt.DB) httprouter.Handle {
+func AuthUser(h httprouter.Handle, db *bolt.DB, ctrs ...Contexter) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		// Is an authorized key in the header?
 		token, err := GetToken(
@@ -56,10 +56,33 @@ func AuthUser(h httprouter.Handle, db *bolt.DB) httprouter.Handle {
 			return
 		}
 
-		// TODO: Split me into my own function.
+		// TODO: Split into my two functions.
 		// Check whether the session token is valid
 		err = db.View(auth.CheckToken(token))
-		if err == nil {
+		switch {
+		case err == nil && len(ctrs) == 0:
+			h(w, r, ps)
+			return
+		case err == nil:
+			// Apply requested context
+			ctx := new(auth.Context)
+			if err = db.View(auth.GetContext(ctx, token)); err != nil {
+				switch err.(type) {
+				case auth.ErrContextMissing:
+					// Valid session with no context.
+					log.Printf("unexpected error: valid session %#q with no context", token)
+					http.Error(w, errors.Wrap(
+						err, "error getting session context").Error(),
+						http.StatusInternalServerError)
+					return
+				default:
+					http.Error(w, "error getting session context", http.StatusInternalServerError)
+					return
+				}
+			}
+			for _, ctr := range ctrs {
+				r = ctr(r, ctx)
+			}
 			h(w, r, ps)
 			return
 		}
@@ -133,7 +156,6 @@ func AuthAdmin(h httprouter.Handle, db *bolt.DB) httprouter.Handle {
 		}
 		err = db.View(admin.CheckToken(token))
 		if err != nil {
-
 			switch err.(type) {
 			case admin.ErrNotFound:
 				http.Error(w, err.Error(), http.StatusUnauthorized)
