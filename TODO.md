@@ -61,6 +61,7 @@
 
 ## Unorganized
 
+- [ ] Swagger HTTP API doc
 - [x] Standardize on JSON camelCase vs snake_case etc
 - [ ] Organize TODOs
 - [ ] Poms / some kind of work measure
@@ -93,6 +94,7 @@
 
 - [x] AuthAdmin middleware
 - [x] Create ticket
+- [ ] GET /tickets?per_page=n&page=m
 - [x] Delete ticket
 - [x] Master API key printed on startup?
   - [x] Use own API key via config?
