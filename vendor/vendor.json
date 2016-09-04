@@ -31,6 +31,13 @@
 			"tree": true
 		},
 		{
+			"checksumSHA1": "likOl7O0BJntqagR050kkOBuY4o=",
+			"path": "golang.org/x/net/websocket",
+			"revision": "1358eff22f0dd0c54fc521042cc607f6ff4b531a",
+			"revisionTime": "2016-09-01T04:28:38Z",
+			"tree": true
+		},
+		{
 			"checksumSHA1": "QcDlr1sWBDt6Dn/v7W/MRgccAi4=",
 			"path": "golang.org/x/sys/unix",
 			"revision": "076b546753157f758b316e59bcb51e6807c04057",
