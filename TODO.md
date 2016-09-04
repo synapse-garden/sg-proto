@@ -1,3 +1,7 @@
+# v0.5.0+ ?
+
+- [ ] Cascading store.Delete / store.Update?
+
 # v0.4.0 ?
 
 - [ ] Versioned REST API?
@@ -34,12 +38,18 @@
 - [ ] Bucket threading
 - [ ] Transaction type to replace func tx blah
 - [ ] Better ErrorMissing / ErrorExists context messages
+- [ ] Figure out whether we can find a logical mapping for UUID / base64
+      shasum strings
 
 # v0.1.0
 
 ## Bugs
 
 - [ ] Users can't understand missing session Error() string since it's bytes
+  - [ ] Configure error output to match expected values: base64 shasums or
+        UUID strings
+- [ ] Invalidate / reissue auth token after refresh
+  - [ ] Figure out how to thread session context through this
 
 ## Dev mode
 
