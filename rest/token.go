@@ -16,7 +16,6 @@ import (
 
 func Token(r *htr.Router, db *bolt.DB) error {
 	r.POST("/tokens", HandleToken(db))
-	// TODO: r.DELETE("/tokens", HandleLogoutUser(db))
 	r.DELETE("/tokens/:token", HandleDeleteToken(db))
 
 	return nil
