@@ -2,11 +2,14 @@ package rest_test
 
 import (
 	"os"
+	"runtime"
 	"testing"
 
+	"github.com/synapse-garden/sg-proto/admin"
 	"github.com/synapse-garden/sg-proto/auth"
 	"github.com/synapse-garden/sg-proto/incept"
 	"github.com/synapse-garden/sg-proto/store"
+	"github.com/synapse-garden/sg-proto/stream"
 	sgt "github.com/synapse-garden/sg-proto/testing"
 	"github.com/synapse-garden/sg-proto/users"
 
@@ -33,9 +36,15 @@ func (s *RESTSuite) SetUpTest(c *C) {
 	c.Assert(db.Update(store.Wrap(
 		store.Migrate(store.Version),
 		store.SetupBuckets(
+			admin.AdminBucket,
 			incept.TicketBucket,
 			users.UserBucket,
 			auth.LoginBucket,
+			auth.SessionBucket,
+			auth.RefreshBucket,
+			auth.ContextBucket,
+			stream.StreamBucket,
+			stream.RiverBucket,
 		),
 	)), IsNil)
 	s.db, s.tmpDir = db, tmpDir
@@ -50,6 +59,7 @@ func (s *RESTSuite) SetUpTest(c *C) {
 }
 
 func (s *RESTSuite) TearDownTest(c *C) {
+	runtime.Gosched()
 	if db := s.db; db != nil {
 		c.Assert(sgt.CleanupDB(db), IsNil)
 		c.Assert(os.Remove(s.tmpDir), IsNil)

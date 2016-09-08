@@ -5,6 +5,7 @@ import (
 	"github.com/synapse-garden/sg-proto/auth"
 	"github.com/synapse-garden/sg-proto/incept"
 	"github.com/synapse-garden/sg-proto/store"
+	"github.com/synapse-garden/sg-proto/stream"
 	"github.com/synapse-garden/sg-proto/users"
 
 	"github.com/boltdb/bolt"
@@ -55,6 +56,8 @@ func Bind(
 		auth.SessionBucket,
 		auth.RefreshBucket,
 		auth.ContextBucket,
+		stream.StreamBucket,
+		stream.RiverBucket,
 	)); err != nil {
 		return nil, err
 	}
@@ -65,6 +68,7 @@ func Bind(
 		Incept,
 		Token,
 		Profile,
+		Stream,
 	} {
 		if err := api(htr, db); err != nil {
 			return nil, err
