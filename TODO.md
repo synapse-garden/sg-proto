@@ -1,6 +1,8 @@
 # v0.5.0+ ?
 
 - [ ] Cascading store.Delete / store.Update?
+- [ ] Map TODOs to Github Issues?
+- [ ] Map TODOs to SG streams / items?
 
 # v0.4.0 ?
 
@@ -10,6 +12,7 @@
 
 # v0.3.0 ?
 
+- [ ] Refactor Streams database funcs
 - [ ] Secure ticket "incept" endpoint (can you just hammer it with UUIDs?)
 - [ ] Concurrent store.Wrap?
 - [ ] Concurrent store.Wrap with dep chains?
