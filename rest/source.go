@@ -10,7 +10,7 @@ import (
 
 type SourceInfo struct {
 	License    string `json:"license"`
-	LicensedTo string `json:"licensed-to"`
+	LicensedTo string `json:"licensedTo"`
 	Location   string `json:"location"`
 }
 
