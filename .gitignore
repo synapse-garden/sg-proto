@@ -6,4 +6,5 @@ my.db
 *#
 .#*
 
-sg/sg[.exe]
+debug
+*.exe
