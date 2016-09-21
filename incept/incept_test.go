@@ -39,11 +39,20 @@ func (s *InceptSuite) TearDownTest(c *C) {
 	}
 }
 
-func (s *InceptSuite) TestingNewTicket(c *C) {
+func (s *InceptSuite) TestNewTicket(c *C) {
 	tkt := incept.Ticket(uuid.NewV4())
 	c.Assert(s.db.View(assertNoTickets(c)), IsNil)
 	c.Assert(s.db.Update(incept.NewTicket(tkt)), IsNil)
 	c.Assert(s.db.View(assertTicketsExist(c, tkt)), IsNil)
+}
+
+func (s *InceptSuite) TestDeleteTicket(c *C) {
+	tkt := incept.Ticket(uuid.NewV4())
+	c.Assert(s.db.View(assertNoTickets(c)), IsNil)
+	c.Assert(s.db.Update(incept.NewTicket(tkt)), IsNil)
+	c.Assert(s.db.View(assertTicketsExist(c, tkt)), IsNil)
+	c.Assert(s.db.Update(incept.DeleteTickets(tkt)), IsNil)
+	c.Check(s.db.View(assertNoTickets(c)), IsNil)
 }
 
 func (s *InceptSuite) TestCheckKey(c *C) {}
