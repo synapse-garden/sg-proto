@@ -2,6 +2,8 @@ package client
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -12,6 +14,25 @@ import (
 	"github.com/pkg/errors"
 )
 
+var customClient = &http.Client{}
+
+// SetCustomCert sets the internal HTTP Client's TLS config to accept
+// the passed certificate bytes.  It is not safe to do this concurrently
+// with HTTP requests in this package.  Any error will reset the
+// internal Client back to its defaults.
+func SetCustomCert(cert []byte) error {
+	roots := x509.NewCertPool()
+	if !roots.AppendCertsFromPEM(cert) {
+		return errors.New("failed to append cert")
+	}
+
+	customClient.Transport = &http.Transport{
+		TLSClientConfig: &tls.Config{RootCAs: roots},
+	}
+
+	return nil
+}
+
 // DecodeDelete makes an HTTP DELETE request to the given resource under
 // the given RequestTransforms.
 func DecodeDelete(resource string, xfs ...RequestTransform) error {
@@ -20,7 +41,7 @@ func DecodeDelete(resource string, xfs ...RequestTransform) error {
 		return errors.Wrap(err, "failed to create HTTP request")
 	}
 
-	if res, err := http.DefaultClient.Do(transform(req, xfs...)); err != nil {
+	if res, err := customClient.Do(transform(req, xfs...)); err != nil {
 		return errors.Wrap(err, "failed to make HTTP request")
 	} else if stat := res.StatusCode; stat != http.StatusOK {
 		err := errors.Errorf("HTTP request failed with status %d (%s)",
@@ -59,7 +80,7 @@ func DecodePost(
 		return errors.Wrap(err, "failed to create HTTP request")
 	}
 
-	if res, err := http.DefaultClient.Do(transform(req, xfs...)); err != nil {
+	if res, err := customClient.Do(transform(req, xfs...)); err != nil {
 		return errors.Wrap(err, "failed to make HTTP request")
 	} else if stat := res.StatusCode; stat != http.StatusOK {
 		err := errors.Errorf("HTTP request failed with status %d (%s)",
@@ -89,7 +110,7 @@ func DecodeGet(
 	if err != nil {
 		return errors.Wrap(err, "failed to create HTTP request")
 	}
-	if res, err := http.DefaultClient.Do(transform(req, xfs...)); err != nil {
+	if res, err := customClient.Do(transform(req, xfs...)); err != nil {
 		return errors.Wrap(err, "failed to make HTTP request")
 	} else if stat := res.StatusCode; stat != http.StatusOK {
 		err := errors.Errorf("HTTP request failed with status %d (%s)",
@@ -114,7 +135,7 @@ func Delete(resource string, xfs ...RequestTransform) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create HTTP request")
 	}
-	if res, err := http.DefaultClient.Do(transform(req, xfs...)); err != nil {
+	if res, err := customClient.Do(transform(req, xfs...)); err != nil {
 		return errors.Wrap(err, "failed to make HTTP request")
 	} else if stat := res.StatusCode; stat != http.StatusOK {
 		err := errors.Errorf("HTTP request failed with status %d (%s)",
@@ -130,6 +151,30 @@ func Delete(resource string, xfs ...RequestTransform) error {
 	} else {
 		return res.Body.Close()
 	}
+}
+
+// Param is a URL param builder.  Use ApplyParams to get the parameterized
+// URL.
+type Param fmt.Stringer
+
+// Filter is a Param for filtering by keyword.
+type Filter string
+
+// String implements Param on Filter.
+func (f Filter) String() string {
+	return "filter=" + string(f)
+}
+
+// ApplyParams applies the given Params to generate a sequence of URL parameters.
+func ApplyParams(ps ...Param) string {
+	if len(ps) == 0 {
+		return ""
+	}
+	str := bytes.NewBufferString("?")
+	for _, p := range ps {
+		str.WriteString("&" + p.String())
+	}
+	return str.String()
 }
 
 // A RequestTransform can be applied to transform an *http.Request.

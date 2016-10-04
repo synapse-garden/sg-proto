@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/synapse-garden/sg-proto/auth"
@@ -18,7 +19,7 @@ import (
 
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
-	ws "golang.org/x/net/websocket"
+	xws "golang.org/x/net/websocket"
 )
 
 const help = `SG Help:
@@ -102,7 +103,7 @@ func OutputJSON(f string, val interface{}) Command {
 func OutputError(err error, f string) Command {
 	return func(c *client.Client) error {
 		_, err := fmt.Fprint(c.State,
-			errors.Wrap(err, f).Error())
+			errors.Wrap(err, f).Error()+"\n")
 		return err
 	}
 }
@@ -219,29 +220,110 @@ func Profile(c *client.Client) error {
 	return OutputJSON("User: ", user)(c)
 }
 
-func Stream(to string) Command {
+func getStreamByName(c *client.Client, name string) (*stream.Stream, error) {
+	strs := new([]*stream.Stream)
+	// Find or create a stream for the user.
+	if err := c.AllStreams(strs); err != nil {
+		return nil, err
+	}
+	for _, s := range *strs {
+		if s.Name == name {
+			return s, nil
+		}
+	}
+	return nil, errors.Errorf("stream %#q not found", name)
+}
+
+func getStreamByID(c *client.Client, uu uuid.UUID) (*stream.Stream, error) {
+	str := new(stream.Stream)
+	return str, c.GetStream(str, uu.String())
+}
+
+// getStream gets a Stream which has the given name and participants.
+// If no such Stream exists, it POSTs and returns a new one for the user.
+func getStream(
+	c *client.Client,
+	name, from, to string,
+) (*stream.Stream, error) {
+	strs := new([]*stream.Stream)
+	// Find or create a stream for the user.
+	if err := c.AllStreams(strs); err != nil {
+		return nil, err
+	}
+	for _, s := range *strs {
+		if s.Name != name {
+			continue
+		}
+
+		rsTo := s.Readers[to]
+		fromOwner := s.Owner == from
+		wsTo, wsFrom := s.Writers[to], s.Writers[from]
+		if (wsFrom || fromOwner) && (rsTo || wsTo) {
+			return s, nil
+		}
+	}
+
+	return client.NewStream(c, name, from, to)
+}
+
+func Stream(which string, to ...string) Command {
 	return func(c *client.Client) error {
 		if err := LoggedIn(c); err != nil {
 			return OutputError(err, "not logged in")(c)
 		}
-		conn, err := c.GetStreamWS(to)
-		if err != nil {
-			return OutputError(err, "not logged in")(c)
+		user := c.State.User
+		if user == nil {
+			user = new(users.User)
+			if err := c.GetProfile(user); err != nil {
+				return OutputError(err, "failed to get profile")(c)
+			}
+			c.State.User = user
 		}
-		s := c.State
 
-		str := new(stream.Stream)
-		if err := ws.JSON.Receive(conn, str); err != nil {
-			return errors.Wrap(err, "failed to receive stream")
+		uu := uuid.FromStringOrNil(which)
+		var str *stream.Stream
+		var err error
+
+		switch {
+		case strings.HasPrefix(which, "#"):
+			// User wants a stream by Name
+			str, err = getStreamByName(c, which)
+		case !uuid.Equal(uu, uuid.Nil):
+			// User wants a stream by ID
+			str, err = getStreamByID(c, uu)
+		default:
+			// The passed value was not a UUID or a
+			// #chatname, so it was a read / write user's
+			// name.
+			//
+			// User wants to find or create a stream.
+			str, err = getStream(c,
+				"#chat",
+				user.Name, which,
+			)
 		}
-		if err := OutputStringf("streaming to %s\n", to)(c); err != nil {
+
+		if err != nil {
+			return OutputError(err, "failed to get Stream")(c)
+		}
+		if err := OutputStringf("joining stream %#q\n", str.ID)(c); err != nil {
+			return OutputError(err, "failed to output")(c)
+		}
+
+		conn, err := c.GetStreamWS(str.ID)
+		if err != nil {
+			return OutputError(err, "failed to open websocket")(c)
+		}
+
+		s := c.State
+		if err := OutputStringf("streaming on %s\n", str.Name)(c); err != nil {
 			return err
 		}
 
-		errs := make(chan error)
+		errs := make(chan error, 10)
 		go func() {
 			for s.Scan() {
-				err = ws.JSON.Send(conn, &stream.Message{
+				err = xws.JSON.Send(conn, &stream.Message{
 					Content: s.Text(),
 				})
 				if err != nil {
@@ -258,7 +340,7 @@ func Stream(to string) Command {
 			msg := new(stream.Message)
 			enc := json.NewEncoder(s)
 			for {
-				if err := ws.JSON.Receive(conn, msg); err != nil {
+				if err := xws.JSON.Receive(conn, msg); err != nil {
 					select {
 					case errs <- errors.Wrap(err, "recieve"):
 					default:

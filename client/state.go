@@ -5,11 +5,13 @@ import (
 	"io"
 
 	"github.com/synapse-garden/sg-proto/auth"
+	"github.com/synapse-garden/sg-proto/users"
 )
 
 // State models a Client's side effects, including buffered output.
 type State struct {
 	Session *auth.Session
+	User    *users.User
 
 	*bufio.Writer
 	*bufio.Scanner

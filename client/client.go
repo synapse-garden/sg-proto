@@ -2,6 +2,7 @@ package client
 
 import (
 	"crypto/sha256"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"github.com/synapse-garden/sg-proto/auth"
 	"github.com/synapse-garden/sg-proto/incept"
 	"github.com/synapse-garden/sg-proto/rest"
+	"github.com/synapse-garden/sg-proto/stream"
 	"github.com/synapse-garden/sg-proto/users"
 
 	ws "golang.org/x/net/websocket"
@@ -95,8 +97,53 @@ func (c *Client) DeleteProfile() error {
 		AuthHeader(auth.BearerType, s.Token))
 }
 
+// CreateStream creates a new Stream belonging to the Session owner.
+func (c *Client) CreateStream(str *stream.Stream) error {
+	if sesh := c.State.Session; sesh == nil {
+		return errors.New("nil session")
+	} else if t := sesh.Token; t == nil {
+		return errors.New("nil session token")
+	} else {
+		return DecodePost(str,
+			c.Backend.String()+"/streams",
+			str,
+			AuthHeader(auth.BearerType, t),
+		)
+	}
+}
+
+// GetStream gets a Stream by ID.
+func (c *Client) GetStream(str *stream.Stream, id string) error {
+	if sesh := c.State.Session; sesh == nil {
+		return errors.New("nil session")
+	} else if t := sesh.Token; t == nil {
+		return errors.New("nil session token")
+	} else {
+		return DecodeGet(str,
+			c.Backend.String()+"/streams/"+id,
+			AuthHeader(auth.BearerType, t),
+		)
+	}
+}
+
+// AllStreams gets the User's owned Streams.
+func (c *Client) AllStreams(strs *[]*stream.Stream, filters ...Param) error {
+	if sesh := c.State.Session; sesh == nil {
+		return errors.New("nil session")
+	} else if t := sesh.Token; t == nil {
+		return errors.New("nil session token")
+	} else {
+		return DecodeGet(strs, fmt.Sprintf(
+			"%s/streams%s",
+			c.Backend,
+			ApplyParams(filters...)),
+			AuthHeader(auth.BearerType, t),
+		)
+	}
+}
+
 // GetStreamWS opens and returns a *golang.org/x/net/websocket.Conn.
-func (c *Client) GetStreamWS(to string) (*ws.Conn, error) {
+func (c *Client) GetStreamWS(id string) (*ws.Conn, error) {
 	s := c.State.Session
 	if c.State.Session == nil {
 		return nil, fmt.Errorf("cannot get stream with a nil Session")
@@ -109,11 +156,16 @@ func (c *Client) GetStreamWS(to string) (*ws.Conn, error) {
 		backend.Scheme = "wss"
 	}
 
-	backend.Path += "/streams/" + to
+	backend.Path += "/streams/" + id + "/start"
+	var conf *tls.Config
+	if t, ok := customClient.Transport.(*http.Transport); ok {
+		conf = t.TLSClientConfig
+	}
 	return ws.DialConfig(&ws.Config{
-		Location: &backend,
-		Origin:   &url.URL{},
-		Version:  ws.ProtocolVersionHybi13,
+		Location:  &backend,
+		Origin:    &url.URL{},
+		TlsConfig: conf,
+		Version:   ws.ProtocolVersionHybi13,
 		Header: http.Header{
 			"Authorization": {"Bearer " + s.Token.String()},
 		},
