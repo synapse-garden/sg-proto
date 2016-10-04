@@ -24,13 +24,35 @@ type ErrMissing string
 
 func (e ErrMissing) Error() string { return fmt.Sprintf("user %#q not found", string(e)) }
 
-func CheckUserExists(u *User) func(*bolt.Tx) error {
+func IsExists(err error) bool {
+	if err == nil {
+		return false
+	}
+	_, ok := err.(ErrExists)
+	return ok
+}
+
+func IsMissing(err error) bool {
+	if err == nil {
+		return false
+	}
+	_, ok := err.(ErrMissing)
+	return ok
+}
+
+// CheckUsersExist checks that the Users with the given names exist.
+func CheckUsersExist(names ...string) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
-		err := store.CheckExists(UserBucket, []byte(u.Name))(tx)
-		if store.IsMissing(err) {
-			return ErrMissing(u.Name)
+		for _, name := range names {
+			err := store.CheckExists(UserBucket, []byte(name))(tx)
+			if store.IsMissing(err) {
+				return ErrMissing(name)
+			} else if err != nil {
+				return err
+			}
 		}
-		return err
+
+		return nil
 	}
 }
 
