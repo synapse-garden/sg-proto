@@ -68,10 +68,10 @@ func (e ErrTokenExpired) Error() string {
 // Session is a client login session.
 type Session struct {
 	Token        Token         `json:"token"`
-	ExpiresIn    time.Duration `json:"expires_in"`
-	Expiration   time.Time     `json:"expires_at,omitempty"`
-	TokenType    TokenType     `json:"token_type"`
-	RefreshToken Token         `json:"refresh_token"`
+	ExpiresIn    time.Duration `json:"expiresIn"`
+	Expiration   time.Time     `json:"expiresAt,omitempty"`
+	TokenType    TokenType     `json:"tokenType"`
+	RefreshToken Token         `json:"refreshToken"`
 }
 
 func DecodeToken(tStr string) (Token, error) {

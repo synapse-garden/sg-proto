@@ -37,7 +37,7 @@ func (s *AuthSuite) TestNewSession(c *C) {
 }
 
 func (s *AuthSuite) TestNewToken(c *C) {
-	// NewToken should generate a new v4 UUID dot Bytes for Bearer.
+	// NewToken should generate a new v4 UUID.Bytes() for Bearer.
 	// Otherwise, it should return nil.
 }
 
