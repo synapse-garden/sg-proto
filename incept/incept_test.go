@@ -1,6 +1,7 @@
 package incept_test
 
 import (
+	"encoding/json"
 	"os"
 	"testing"
 
@@ -56,3 +57,22 @@ func (s *InceptSuite) TestDeleteTicket(c *C) {
 }
 
 func (s *InceptSuite) TestCheckKey(c *C) {}
+
+func (s *InceptSuite) TestTicketMarshalJSON(c *C) {
+	expect := uuid.NewV4().String()
+	got, err := uuid.FromString(expect)
+	c.Assert(err, IsNil)
+	bs, err := json.Marshal(incept.Ticket(got))
+	c.Assert(err, IsNil)
+	c.Check(string(bs), Equals, `"`+expect+`"`)
+}
+
+func (s *InceptSuite) TestTicketUnmarshalJSON(c *C) {
+	expect := incept.Ticket(uuid.NewV4())
+	bs, err := json.Marshal(expect)
+	c.Assert(err, IsNil)
+	var got incept.Ticket
+	c.Assert(json.Unmarshal(bs, &got), IsNil)
+	c.Logf("%#q got\n%#q expect", got.String(), expect.String())
+	c.Check(uuid.Equal(uuid.UUID(got), uuid.UUID(expect)), Equals, true)
+}

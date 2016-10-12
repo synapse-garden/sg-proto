@@ -1,6 +1,7 @@
 package incept
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/synapse-garden/sg-proto/auth"
@@ -23,6 +24,24 @@ type Ticket uuid.UUID
 
 func (t Ticket) Bytes() []byte  { return uuid.UUID(t).Bytes() }
 func (t Ticket) String() string { return uuid.UUID(t).String() }
+
+func (t *Ticket) UnmarshalJSON(bs []byte) error {
+	var val string
+	if err := json.Unmarshal(bs, &val); err != nil {
+		return err
+	}
+	uu, err := uuid.FromString(val)
+	if err != nil {
+		return err
+	}
+
+	*t = Ticket(uu)
+	return nil
+}
+
+func (t Ticket) MarshalJSON() ([]byte, error) {
+	return json.Marshal(t.String())
+}
 
 func NewTickets(ts ...Ticket) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
