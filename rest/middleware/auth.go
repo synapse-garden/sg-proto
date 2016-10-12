@@ -22,10 +22,10 @@ const (
 	RefreshHeader Header = "X-Auth-Refresh"
 )
 
-func GetToken(kind, from string) ([]byte, error) {
+func GetToken(kind auth.TokenType, from string) ([]byte, error) {
 	// Token is expected to be base64 encoded byte slice.
 	// Kind is assumed to be valid.
-	substrings := strings.SplitN(from, kind+" ", 2)
+	substrings := strings.SplitN(from, kind.String()+" ", 2)
 	switch {
 	case len(from) == 0:
 		return nil, errors.Errorf(
@@ -48,7 +48,7 @@ func AuthUser(h httprouter.Handle, db *bolt.DB, ctrs ...Contexter) httprouter.Ha
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		// Is an authorized key in the header?
 		token, err := GetToken(
-			"Bearer",
+			auth.BearerType,
 			r.Header.Get(string(AuthHeader)),
 		)
 		if err != nil {
@@ -93,7 +93,7 @@ func AuthUser(h httprouter.Handle, db *bolt.DB, ctrs ...Contexter) httprouter.Ha
 			return
 		case auth.ErrTokenExpired:
 			rToken, err := GetToken(
-				"Refresh",
+				auth.RefreshType,
 				r.Header.Get(string(RefreshHeader)),
 			)
 			if err != nil {
@@ -147,7 +147,7 @@ func AuthAdmin(h httprouter.Handle, db *bolt.DB) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		// Is an authorized key in the header?
 		token, err := GetToken(
-			"Admin",
+			auth.AdminType,
 			r.Header.Get(string(AuthHeader)),
 		)
 		if err != nil {

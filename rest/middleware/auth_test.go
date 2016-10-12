@@ -103,7 +103,7 @@ func (s *MiddlewareSuite) TestGetToken(c *C) {
 		expect: validToken,
 	}} {
 		c.Logf("test %d: %s", i, test.given)
-		got, err := middleware.GetToken("Bearer", test.given)
+		got, err := middleware.GetToken(auth.BearerType, test.given)
 		if test.expectErr != "" {
 			c.Check(err, ErrorMatches, test.expectErr)
 			continue
