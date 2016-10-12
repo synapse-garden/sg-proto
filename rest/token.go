@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/synapse-garden/sg-proto/auth"
+	mw "github.com/synapse-garden/sg-proto/rest/middleware"
 
 	"github.com/boltdb/bolt"
 	htr "github.com/julienschmidt/httprouter"
@@ -16,7 +16,7 @@ import (
 
 func Token(r *htr.Router, db *bolt.DB) error {
 	r.POST("/tokens", HandleToken(db))
-	r.DELETE("/tokens/:token", HandleDeleteToken(db))
+	r.DELETE("/tokens", mw.AuthUser(HandleDeleteToken(db), db, mw.CtxSetToken))
 
 	return nil
 }
@@ -73,22 +73,10 @@ func HandleToken(db *bolt.DB) htr.Handle {
 
 func HandleDeleteToken(db *bolt.DB) htr.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps htr.Params) {
-		escaped := ps.ByName("token")
-		unescaped, err := url.QueryUnescape(escaped)
-		if err != nil {
-			http.Error(w, errors.Wrapf(
-				err, "token not URL-escaped", escaped,
-			).Error(), http.StatusBadRequest)
-			return
-		}
-		token, err := auth.DecodeToken(unescaped)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
+		token := mw.CtxGetToken(r)
 
 		// len == 0 case handled by other handler
-		if err = db.View(auth.CheckToken(token)); err != nil {
+		if err := db.View(auth.CheckToken(token)); err != nil {
 			var code int
 			switch err.(type) {
 			case auth.ErrMissingSession, auth.ErrTokenExpired:
