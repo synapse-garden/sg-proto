@@ -42,10 +42,17 @@ func Admin(token auth.Token) API {
 			}
 		}
 
+		r.GET("/admin/verify", mw.AuthAdmin(Verify, db))
 		r.POST("/admin/tickets", mw.AuthAdmin(HandleNewTicket(db), db))
 		r.DELETE("/admin/tickets/:ticket", mw.AuthAdmin(HandleDeleteTicket(db), db))
 
 		return nil
+	}
+}
+
+func Verify(w http.ResponseWriter, r *http.Request, _ htr.Params) {
+	if err := json.NewEncoder(w).Encode(true); err != nil {
+		http.Error(w, "failed to write response", http.StatusInternalServerError)
 	}
 }
 
