@@ -16,6 +16,7 @@ type TokenType int
 
 const (
 	BearerType TokenType = iota
+	AdminType
 	RefreshType
 
 	Expiration = 5 * time.Minute
@@ -34,15 +35,23 @@ var (
 	RefreshBucket = store.Bucket("refresh")
 
 	tokenNames = map[TokenType]string{
-		BearerType: "Bearer",
+		BearerType:  "Bearer",
+		RefreshType: "Refresh",
+		AdminType:   "Admin",
 	}
 
 	tokenTypes = map[string]bool{
-		"Bearer": true,
+		"Bearer":  true,
+		"Refresh": true,
+		"Admin":   true,
 	}
 )
 
 type Token []byte
+
+func (t Token) String() string {
+	return base64.StdEncoding.EncodeToString([]byte(t))
+}
 
 type ErrMissingSession []byte
 
