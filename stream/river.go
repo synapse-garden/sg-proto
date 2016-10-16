@@ -10,7 +10,7 @@ import (
 	"github.com/go-mangos/mangos"
 	"github.com/go-mangos/mangos/protocol/bus"
 	"github.com/go-mangos/mangos/protocol/pub"
-	"github.com/go-mangos/mangos/protocol/sub"
+	mg_sub "github.com/go-mangos/mangos/protocol/sub"
 	"github.com/go-mangos/mangos/transport/inproc"
 	"github.com/pkg/errors"
 )
@@ -19,25 +19,6 @@ import (
 // correspond to Streams from StreamBucket by ID, and every River ID in
 // the bucket corresponds to a connected River.
 var RiverBucket = store.Bucket("rivers")
-
-// Topic is a Pub/Sub topic.  Package users should export and manage
-// their own Topic constants.
-type Topic interface {
-	Code() []byte
-	Name() string
-}
-
-// AllTopic is a Subscribe Topic which matches any Topic.
-type AllTopic struct{}
-
-// Code implements Topic.Code on AllTopic.
-func (a AllTopic) Code() []byte { return []byte("") }
-
-// Name implements Topic.Name on AllTopic, returning "all".
-func (a AllTopic) Name() string { return "all" }
-
-// All is a package constant for AllTopic.
-var All = AllTopic{}
 
 type errRiverExists string
 
@@ -92,9 +73,25 @@ func ClearRivers(tx *bolt.Tx) error {
 	})
 }
 
+// PubRiver is a Publisher River which can only Send.  To send on a
+// Topic, prefix the Send with the desired Topic code and Prefix byte.
+// Only SubRivers which are created on the given Topic, connected to the
+// PubRiver, will receive messages on that Topic.
+//
+// NOTE: The go-mangos implementation of PubRiver (returned by NewPub)
+//       sends messages to all connected SubRivers, but they are
+//       filtered before Recv.  This is not a technique which guarantees
+//       unauthorized hosts will not receive the sent bytes; they will.
+//       But their SubRiver Recv method will not behave as though it
+//       received the message.
+type PubRiver interface {
+	Close() error
+	Send([]byte) error
+}
+
 // NewPub creates an inproc publisher River in the given Stream bucket
 // in RiverBucket, with address id.
-func NewPub(id, streamID string, tx *bolt.Tx) (r River, e error) {
+func NewPub(id, streamID string, tx *bolt.Tx) (r PubRiver, e error) {
 	b, err := tx.Bucket(RiverBucket).CreateBucketIfNotExists([]byte(
 		streamID,
 	))
@@ -140,6 +137,35 @@ func NewPub(id, streamID string, tx *bolt.Tx) (r River, e error) {
 	return sock, nil
 }
 
+// SubRiver is a Subscriber River which can only Recv.  It can be
+// implemented on a byte prefix Topic, which is to be removed before
+// Recv returns.
+type SubRiver interface {
+	Close() error
+	Recv() ([]byte, error)
+}
+
+type sub struct {
+	SubRiver
+	// TODO: trie-based code length match
+	topics map[byte]Topic
+}
+
+func (s sub) Recv() ([]byte, error) {
+	bs, err := s.SubRiver.Recv()
+	if err != nil {
+		return nil, err
+	}
+
+	// Note that sub is always made in NewSub so its length should
+	// never be 0.
+	if topic, ok := s.topics[bs[0]]; ok {
+		return bs[topic.Len():], nil
+	}
+
+	return nil, fmt.Errorf("received unknown prefix %#v", bs[0])
+}
+
 // NewSub creates an inproc subscriber River which connects to all
 // publisher Rivers in the given streamID bucket in RiverBucket,
 // subscribing on the given Topics, or all topics if no Topic is given.
@@ -147,13 +173,13 @@ func NewSub(
 	streamID string,
 	tx *bolt.Tx,
 	topics ...Topic,
-) (r River, e error) {
+) (r SubRiver, e error) {
 	b := tx.Bucket(RiverBucket).Bucket([]byte(streamID))
 	if b == nil {
 		return nil, errStreamMissing(streamID)
 	}
 
-	sock, err := sub.NewSocket()
+	sock, err := mg_sub.NewSocket()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create socket")
 	}
@@ -178,10 +204,19 @@ func NewSub(
 	}
 
 	if len(topics) == 0 {
-		topics = []Topic{All}
+		topics = []Topic{Global}
 	}
 
+	topicMap := make(map[byte]Topic)
 	for _, t := range topics {
+		pre := t.Prefix()
+		if top, ok := topicMap[pre]; ok {
+			return nil, errors.Errorf(
+				"redundant topics %#q, %#q",
+				top.Name(), t.Name(),
+			)
+		}
+		topicMap[pre] = t
 		err = sock.SetOption(mangos.OptionSubscribe, t.Code())
 		if err != nil {
 			return nil, errors.Wrapf(err,
@@ -200,7 +235,10 @@ func NewSub(
 		}
 	}
 
-	return sock, nil
+	return sub{
+		SubRiver: sock,
+		topics:   topicMap,
+	}, nil
 }
 
 // NewBus creates a new bus River, registers it in the DB, connects it

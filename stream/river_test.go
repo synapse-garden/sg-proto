@@ -53,7 +53,7 @@ func makeBus(c *C, db *bolt.DB, id, streamID string) (r stream.River) {
 	return
 }
 
-func makePub(c *C, db *bolt.DB, id, streamID string) (r stream.River) {
+func makePub(c *C, db *bolt.DB, id, streamID string) (r stream.PubRiver) {
 	c.Assert(db.Update(func(tx *bolt.Tx) (e error) {
 		r, e = stream.NewPub(id, streamID, tx)
 		return
@@ -66,7 +66,7 @@ func makeSub(c *C,
 	db *bolt.DB,
 	streamID string,
 	topics ...stream.Topic,
-) (r stream.River) {
+) (r stream.SubRiver) {
 	c.Assert(db.Update(func(tx *bolt.Tx) (e error) {
 		r, e = stream.NewSub(streamID, tx, topics...)
 		return
@@ -75,15 +75,53 @@ func makeSub(c *C,
 	return
 }
 
-type testingTopic []byte
+type mockRiver struct {
+	SendErrs []error
+	Sent     [][]byte
+	Recvs    [][]byte
+	RecvErrs []error
+	closeErr error
+
+	rCount int
+}
+
+func (m *mockRiver) Send(msg []byte) error {
+	m.Sent = append(m.Sent, msg)
+	return m.SendErrs[len(m.Sent)-1]
+}
+
+func (m *mockRiver) Recv() ([]byte, error) {
+	defer func() { m.rCount++ }()
+	return m.Recvs[m.rCount], m.RecvErrs[m.rCount]
+}
+
+func (m *mockRiver) Close() error { return m.closeErr }
+
+type testingTopic struct {
+	pre  byte
+	code []byte
+}
+
+func (t testingTopic) Prefix() byte { return t.pre }
 
 func (t testingTopic) Code() []byte {
-	return []byte(t)
+	return append([]byte{t.pre}, t.code...)
 }
 
 func (t testingTopic) Name() string {
 	return "testing"
 }
+
+func (t testingTopic) Len() int {
+	return len(t.code) + 1
+}
+
+var (
+	_ = stream.River(&mockRiver{})
+	_ = stream.SubRiver(&mockRiver{})
+	_ = stream.PubRiver(&mockRiver{})
+	_ = stream.Topic(testingTopic{})
+)
 
 func recvTilDone(c *C,
 	r recver,
@@ -183,7 +221,7 @@ func startRecving(r recver) (<-chan []byte, <-chan error) {
 }
 
 func (s *StreamSuite) TestNewPub(c *C) {
-	var p1 stream.River
+	var p1 stream.PubRiver
 	c.Assert(s.db.Update(func(tx *bolt.Tx) (e error) {
 		p1, e = stream.NewPub("p1", "goodbye", tx)
 		return
@@ -195,7 +233,7 @@ func (s *StreamSuite) TestNewPub(c *C) {
 
 	checkRivers(c, s.db, "goodbye", "p1")
 
-	var p2 stream.River
+	var p2 stream.PubRiver
 	c.Assert(s.db.Update(func(tx *bolt.Tx) (e error) {
 		p2, e = stream.NewPub("p2", "goodbye", tx)
 		return
@@ -217,16 +255,16 @@ func (s *StreamSuite) TestNewPub(c *C) {
 	sb1 := makeSub(c, s.db, "goodbye")
 	msgs1, errs1 := startRecving(sb1)
 
-	c.Assert(p1.Send([]byte("hello1")), IsNil)
+	c.Assert(p1.Send(stream.BytesFor(stream.Global, []byte("hello1"))), IsNil)
 	checkMessagesRecvd(c, msgs1, errs1, "hello1")
 
-	c.Assert(p2.Send([]byte("hello2")), IsNil)
+	c.Assert(p2.Send(stream.BytesFor(stream.Global, []byte("hello2"))), IsNil)
 	checkMessagesRecvd(c, msgs1, errs1, "hello2")
 
 	sb2 := makeSub(c, s.db, "goodbye")
 	msgs2, errs2 := startRecving(sb2)
 
-	c.Assert(p1.Send([]byte("hello3")), IsNil)
+	c.Assert(p1.Send(stream.BytesFor(stream.Global, []byte("hello3"))), IsNil)
 	checkMessagesRecvd(c, msgs1, errs1, "hello3")
 	checkMessagesRecvd(c, msgs2, errs2, "hello3")
 
@@ -245,63 +283,67 @@ func (s *StreamSuite) TestNewSub(c *C) {
 
 	checkRivers(c, s.db, "goodbye", "p1", "p2")
 
-	var sb, sbTop, sbMore stream.River
+	var sbGlob, sbHello, sbMore stream.SubRiver
 	c.Assert(s.db.Update(func(tx *bolt.Tx) (e error) {
-		sb, e = stream.NewSub("goodbye", tx)
+		sbGlob, e = stream.NewSub("goodbye", tx)
 		return
 	}), IsNil)
 
-	expect, err := sub.NewSocket()
+	subsock, err := sub.NewSocket()
 	c.Assert(err, IsNil)
+	expect := stream.MakeSub(subsock)
 
-	c.Check(reflect.TypeOf(sb), Equals, reflect.TypeOf(expect))
+	c.Check(reflect.TypeOf(sbGlob), Equals, reflect.TypeOf(expect))
+
+	helloTopic := testingTopic{pre: 0x1, code: []byte("hello")}
+	goodbyeTopic := testingTopic{pre: 0x2, code: []byte("goodbye")}
 
 	c.Assert(s.db.Update(func(tx *bolt.Tx) (e error) {
-		sbTop, e = stream.NewSub("goodbye", tx, testingTopic("hello"))
+		sbHello, e = stream.NewSub("goodbye", tx, helloTopic)
 		return
 	}), IsNil)
 
-	c.Check(reflect.TypeOf(sbTop), Equals, reflect.TypeOf(expect))
+	c.Check(reflect.TypeOf(sbHello), Equals, reflect.TypeOf(expect))
 
-	msgs, errs := startRecving(sb)
-	msgsTop, errsTop := startRecving(sbTop)
+	msgsGlob, errsGlob := startRecving(sbGlob)
+	msgsHello, errsHello := startRecving(sbHello)
 
-	c.Assert(p1.Send([]byte("hello1")), IsNil)
-	checkMessagesRecvd(c, msgs, errs, "hello1")
-	checkMessagesRecvd(c, msgsTop, errsTop, "hello1")
+	c.Assert(p1.Send(stream.BytesFor(stream.Global, []byte("hello1"))), IsNil)
+	checkMessagesRecvd(c, msgsGlob, errsGlob, "hello1")
+	tryNotRecv(c, msgsHello, errsHello)
 
-	c.Assert(p2.Send([]byte("goodbye1")), IsNil)
-	checkMessagesRecvd(c, msgs, errs, "goodbye1")
-	tryNotRecv(c, msgsTop, errsTop)
+	c.Assert(p2.Send(stream.BytesFor(helloTopic, []byte("goodbye1"))), IsNil)
+	checkMessagesRecvd(c, msgsHello, errsGlob, "goodbye1")
+	tryNotRecv(c, msgsGlob, errsGlob)
 
 	c.Assert(s.db.Update(func(tx *bolt.Tx) (e error) {
-		sbMore, e = stream.NewSub("goodbye", tx, testingTopic("hello"), testingTopic("goodbye"))
+		sbMore, e = stream.NewSub("goodbye", tx, helloTopic, goodbyeTopic)
 		return
 	}), IsNil)
 
-	c.Check(reflect.TypeOf(sbTop), Equals, reflect.TypeOf(expect))
+	c.Check(reflect.TypeOf(sbHello), Equals, reflect.TypeOf(expect))
 
 	msgsMore, errsMore := startRecving(sbMore)
 
-	c.Assert(p1.Send([]byte("hello3")), IsNil)
-	checkMessagesRecvd(c, msgs, errs, "hello3")
-	checkMessagesRecvd(c, msgsTop, errsTop, "hello3")
+	c.Assert(p1.Send(stream.BytesFor(helloTopic, []byte("hello3"))), IsNil)
+	tryNotRecv(c, msgsGlob, errsGlob)
+	checkMessagesRecvd(c, msgsHello, errsHello, "hello3")
 	checkMessagesRecvd(c, msgsMore, errsMore, "hello3")
 
-	c.Assert(p1.Send([]byte("fresh3")), IsNil)
-	checkMessagesRecvd(c, msgs, errs, "fresh3")
-	tryNotRecv(c, msgsTop, errsTop)
+	c.Assert(p1.Send(stream.BytesFor(stream.Global, []byte("fresh3"))), IsNil)
+	checkMessagesRecvd(c, msgsGlob, errsGlob, "fresh3")
+	tryNotRecv(c, msgsHello, errsHello)
 	tryNotRecv(c, msgsMore, errsMore)
 
-	c.Assert(sb.Close(), IsNil)
-	c.Assert(sbTop.Close(), IsNil)
+	c.Assert(sbGlob.Close(), IsNil)
+	c.Assert(sbHello.Close(), IsNil)
 	c.Assert(sbMore.Close(), IsNil)
 
 	c.Assert(p1.Close(), IsNil)
 	c.Assert(p2.Close(), IsNil)
 
-	c.Check(tryRecvError(c, msgs, errs), ErrorMatches, "connection closed")
-	c.Check(tryRecvError(c, msgsTop, errsTop), ErrorMatches, "connection closed")
+	c.Check(tryRecvError(c, msgsGlob, errsGlob), ErrorMatches, "connection closed")
+	c.Check(tryRecvError(c, msgsHello, errsHello), ErrorMatches, "connection closed")
 	c.Check(tryRecvError(c, msgsMore, errsMore), ErrorMatches, "connection closed")
 }
 
