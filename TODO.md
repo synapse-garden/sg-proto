@@ -28,6 +28,9 @@
 - [ ] Store.WrapBucket(store.Bucket(...), ...Transact)
 - [ ] Decide about capnproto / protobuf for Bolt / Rivers
 - [ ] Read-only Streams
+- [ ] Finer-grained read authorization, public / private / circles?
+- [ ] Only one notification stream exists per user
+- [ ] Package user can specify how it works
 
 # v0.2.0 ?
 
@@ -51,6 +54,13 @@
   - [ ] ValidationError interface which tells the client what keys / etc are wrong?
 - [ ] Figure out whether we can find a logical mapping for UUID / base64
       shasum strings
+- [ ] Notification topic performance
+  - [ ] Individual publishers for GUIDs instead of API-global
+    - [ ] Group.Hash -> GUID unique by users (?)
+	- [ ] Create and destroy Group pub rivers on Group update
+	- [ ] API pub river publishes to GUID subscribers, GUIDs publish to
+	      their subscribers (???)
+	- [ ] Clarify this API / sketch up some tests
 
 # v0.1.0
 
@@ -176,9 +186,28 @@
 - [x] Stream REST API
 - [x] Users can GET /streams they belong to, not just Streams they own
 - [x] SSL "wss" works correctly
+- [ ] Use https://golang.org/pkg/net/http/httptrace/ for REST test
 - [ ] Multiple Rivers per account
 - [ ] Close running stream from API
 - [ ] Inactive Rivers eventually time out
+
+## Notifications
+
+- [ ] User can connect to ws to subscribe to notifs on username topic.
+- [ ] APIs publish notifs to each affected user, or to a global topic.
+  - [ ] A user cannot spoof the topic by making their username something
+        colliding with another user's topic.  ("john" vs "johndoe")
+  - [ ] Use u/BLAKE2 hash of username.
+- [ ] Pub topics are the output of some function, the API does not use
+      its own topics.
+- [ ] Messages sent by the user on the websocket do nothing.
+- [ ] The design supports a future implementation which permits the API
+      to use req/rep Rivers to control the behavior of receivers.
+- [ ] Only an authenticated user can obtain a sub River.
+- [ ] An authenticated user can obtain more than one sub River at once.
+- [ ] Topics are loaded by the sub river from a user bucket in streams.
+      I.e., at an API level, the notification rivers belonging to the
+	  user are interfaced via a single Stream having the user's ID.
 
 ## Chat
 
