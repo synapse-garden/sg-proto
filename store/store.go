@@ -12,6 +12,10 @@ var (
 	VersionBucket = []byte("version")
 )
 
+// Bucket is an identifier for a package constant to define the BoltDB
+// bucket where a resource is stored.
+//
+// TODO: nested Buckets?
 type Bucket []byte
 
 func Prep(buckets ...Bucket) func(*bolt.Tx) error {
