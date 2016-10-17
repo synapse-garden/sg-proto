@@ -24,7 +24,7 @@ x = Same user websocket conn Bind
 x-S--(P)--S
     / | \
  x-S  S  S
- 
+
 THE DUMB WAY:
 - Just use the UserID as the topic.
 
@@ -35,23 +35,24 @@ ANOTHER DUMB WAY:
   own update mechanism.
 
 Notif authorization:
-- [ ] The end-user only gets notifications on things he has at least
-      read privilege for.
-  - [ ] When the end-user's privileges change, he must stop or start
+- [x] The notif publisher user is responsible for publishing to the
+      correct stream.Topics.
+  - [x] When the end-user's privileges change, he must stop or start
         receiving updates on the changed resources.
     - [ ] This would be easier to manage if privilege was described by a
 	      single collection.
-	- [ ] A user subscribes to the ID of a resource he has read priv on.
+	- [ ] A user subscribes to the group ID of a resource he has read
+	      priv on.
 	- [ ] When he loses privilege, the topic changes at the pub.
 	- [ ] When a privilege changes, the publisher must notify all users
 	      (who are still privileged) about the new token, with req/rep.
 	- [ ] So: req/rep is how privilege updates have to happen on rivers.
-  - [ ] A notification river is a topical subscriber to a notif pub.
+  - [x] A notification river is a topical subscriber to a notif pub.
   - [ ] Either the subscriber must change, or the publisher must change.
-  - [ ] The publisher has knowledge of the updated resource.
-  - [ ] The subscriber only has knowledge of the topic and the pub addr.
+  - [x] The publisher has knowledge of the updated resource.
+  - [x] The subscriber only has knowledge of its topics and the pub addr
 
-- [ ] Topics in /users are User IDs.
+- [x] Topics in /users are BLAKE2 64-bit hashed User IDs plus prefix.
   - [ ] What about blocked Users?  Can anyone see when a user's bounty
         increases?
   - [ ] When a group notif token is updated, it will notify all users in
@@ -74,7 +75,7 @@ AUTH PROBLEMS:
 	    need to refresh your cache of the object and catch up.
   4. This all leads me to think the complexity is higher than necessary.
 
-Notif API:
+Future Notif API:
 - [ ] Subscribe to all publishers in /rivers/notifs
 - [ ] Topics loaded for user from /streams/users/:user_id/
 - [ ] Something with a notif publisher is created or updated
