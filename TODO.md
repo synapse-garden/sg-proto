@@ -13,6 +13,8 @@
 - [ ] Distributed storage?
 - [ ] Cassandra / etc bigtable backend?
 - [ ] Offer River connections besides Websocket?
+- [ ] Consider package-global caching optimizations to things such as
+      user ID hashes
 
 # v0.3.0 ?
 
@@ -31,9 +33,11 @@
 - [ ] Finer-grained read authorization, public / private / circles?
 - [ ] Only one notification stream exists per user
 - [ ] Package user can specify how it works
+- [ ] Consider using a salted hash for stream topics
 
 # v0.2.0 ?
 
+- [ ] Notif global Topic
 - [ ] Decide whether auth.Refresh should delete and exchange the given refresh token
 - [ ] "Friendly UUIDs" -- map 4-bit chunks to phonemes or small words?
 - [ ] "HTTP Errors" -- this is really two problems.
@@ -82,6 +86,9 @@
 
 ## Unorganized
 
+- [ ] The design of Rivers supports a future implementation which
+      permits the API to use req/rep Rivers to control the behavior of
+	  receivers.
 - [x] Reorganize streams package with more abstraction
 - [ ] Swagger HTTP API doc
 - [x] Standardize on JSON camelCase vs snake_case etc
@@ -187,30 +194,36 @@
 - [x] Users can GET /streams they belong to, not just Streams they own
 - [x] SSL "wss" works correctly
 - [ ] Use https://golang.org/pkg/net/http/httptrace/ for REST test
-- [ ] Multiple Rivers per account
+- [ ] Multiple Rivers per Stream per User
 - [ ] Close running stream from API
 - [ ] Inactive Rivers eventually time out
 
 ## Notifications
 
-- [ ] User can connect to ws to subscribe to notifs on username topic.
-- [ ] APIs publish notifs to each affected user, or to a global topic.
-  - [ ] A user cannot spoof the topic by making their username something
+- [x] notif.MakeUserTopic returns a notif.UserTopic generated uniquely
+      using "USER"+BLAKE2(id).
+- [x] User can connect to ws to subscribe to notifs on topic uniquely
+      generated from username.
+- [x] APIs publish notifs to each affected user
+  - [x] A user cannot spoof the topic by making their username something
         colliding with another user's topic.  ("john" vs "johndoe")
-  - [ ] Use u/BLAKE2 hash of username.
-- [ ] Pub topics are the output of some function, the API does not use
+  - [x] Use u/BLAKE2 hash of username.
+  - [x] Notif package generates a 64-byte unique ID to prepend the User's
+        topics with.
+- [x] Pub topics are the output of some function, the API does not use
       its own topics.
-- [ ] Messages sent by the user on the websocket do nothing.
-- [ ] The design supports a future implementation which permits the API
-      to use req/rep Rivers to control the behavior of receivers.
-- [ ] Only an authenticated user can obtain a sub River.
-- [ ] An authenticated user can obtain more than one sub River at once.
-- [ ] Topics are loaded by the sub river from a user bucket in streams.
+- [x] The user switches on the prefix to the topic in order to subslice
+      the message, removing the topic slice.
+- [x] Messages sent by the user on the websocket do nothing.
+- [x] Only an authenticated user can obtain a sub River.
+- [x] An authenticated user can obtain more than one sub River at once.
+- [x] Topics are loaded by the sub river from a user bucket in streams.
       I.e., at an API level, the notification rivers belonging to the
 	  user are interfaced via a single Stream having the user's ID.
 
 ## Chat
 
+- [ ] Notify when user opens a chat to users
 - [ ] Chat between two users (on top of streams API)
 - [ ] Chat messages stored
 - [ ] Chat messages queryable (backward?) by timestamp and paginated
