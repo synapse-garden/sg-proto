@@ -127,17 +127,18 @@
   - [x] Report base64 encoded value
 - [x] Can't log out because session is not URL-encoded
 - [x] River Bind never returns, so River is never cleaned up
-- [ ] Refresh tokens overlap with auth tokens in header?
-- [ ] Refresh tokens can zombify expired auth tokens
-- [ ] User auth should return same token if not expired?
+- [x] Fix failing or blocking tests
+- [ ] Refresh tokens must be concatenated to auth tokens in header
+- [ ] Refresh tokens must not zombify expired auth tokens, instead
+      create new tokens
+- [ ] Refresh tokens must be able to be invalidated
+- [ ] User auth should return same token if not expired? (TODO: understand this)
 - [ ] Performance is terrible (~30ms on GET on /source???)
   - [ ] Is it just Postman?
   - [ ] Benchmarking?
-- [ ] Doesn't support multiple tokens (bearer + refresh)
 - [ ] Deleting the user's profile doesn't eliminate his owned objects.
 - [ ] Deleting the user's profile doesn't close his Streams.
-- [ ] Fix failing or blocking tests
-- [ ] CLIENT: Console < > get encoded oddly with unicode values
+- [ ] Bad usernames cannot be looked up for expired Sessions
 
 ## Admin API
 
@@ -155,6 +156,7 @@
 - [ ] Make sure not just anyone can get a refresh token
 - [ ] Log ERROR statements on all unexpected internal errors
 - [ ] Split Streams and Rivers
+- [ ] Update store.Version
 
 ## GPL
 
