@@ -8,8 +8,10 @@ import (
 	blake2b "github.com/minio/blake2b-simd"
 )
 
-// Topic consts.
+// Topic and River consts.
 const (
+	River = "notifs"
+
 	UserPrefix    = byte(1)
 	userTopicSize = 65
 )

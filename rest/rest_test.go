@@ -4,6 +4,7 @@ import (
 	"os"
 	"runtime"
 	"testing"
+	"time"
 
 	"github.com/synapse-garden/sg-proto/admin"
 	"github.com/synapse-garden/sg-proto/auth"
@@ -60,6 +61,7 @@ func (s *RESTSuite) SetUpTest(c *C) {
 
 func (s *RESTSuite) TearDownTest(c *C) {
 	runtime.Gosched()
+	time.Sleep(sgt.CleanupWait)
 	if db := s.db; db != nil {
 		c.Assert(sgt.CleanupDB(db), IsNil)
 		c.Assert(os.Remove(s.tmpDir), IsNil)
