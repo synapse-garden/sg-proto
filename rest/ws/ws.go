@@ -131,3 +131,20 @@ func Bind(sr SendRecver, read SocketReader) xws.Handler {
 		}
 	}
 }
+
+// BindRead receives messages from the websocket SendRecver and a
+// websocket connection.
+func BindRead(r Recver) xws.Handler {
+	return func(c *xws.Conn) {
+		// Recv from r; pass result to c Write if no error.
+		for bs, err := r.Recv(); err == nil; bs, err = r.Recv() {
+			if _, err = c.Write(bs); err != nil {
+				break
+			}
+		}
+
+		if err := c.Close(); err != nil {
+			log.Printf("failed to close Websocket: %s", err.Error())
+		}
+	}
+}
