@@ -1,4 +1,4 @@
-package stream
+package river
 
 // Topic is a Pub/Sub topic.  Package users should export and manage
 // their own Topic constants.  Note that this means collisions can

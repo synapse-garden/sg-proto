@@ -3,8 +3,9 @@ package stream
 import (
 	"encoding/json"
 
-	"github.com/boltdb/bolt"
 	"github.com/synapse-garden/sg-proto/store"
+
+	"github.com/boltdb/bolt"
 )
 
 // Needed interfaces:

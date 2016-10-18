@@ -29,11 +29,3 @@ func (s *StreamSuite) TestErrUnauthorized(c *C) {
 	c.Check(err, ErrorMatches, "user `bob` unauthorized")
 	c.Check(stream.IsUnauthorized(err), Equals, true)
 }
-
-func (s *StreamSuite) TestErrRiverExists(c *C) {
-	var err error
-	c.Check(stream.IsRiverExists(err), Equals, false)
-	err = stream.MakeRiverExistsErr("bob")
-	c.Check(err, ErrorMatches, "river `bob` already exists")
-	c.Check(stream.IsRiverExists(err), Equals, true)
-}

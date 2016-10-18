@@ -1,11 +1,11 @@
-package stream_test
+package river_test
 
 import (
 	"os"
 	"testing"
 
 	"github.com/synapse-garden/sg-proto/store"
-	"github.com/synapse-garden/sg-proto/stream"
+	"github.com/synapse-garden/sg-proto/stream/river"
 	sgt "github.com/synapse-garden/sg-proto/testing"
 
 	"github.com/boltdb/bolt"
@@ -14,24 +14,24 @@ import (
 
 func Test(t *testing.T) { TestingT(t) }
 
-type StreamSuite struct {
+type RiverSuite struct {
 	db     *bolt.DB
 	tmpDir string
 }
 
-var _ = Suite(&StreamSuite{})
+var _ = Suite(&RiverSuite{})
 
-func (s *StreamSuite) SetUpTest(c *C) {
-	db, tmpDir, err := sgt.TempDB("sg-stream-test")
+func (s *RiverSuite) SetUpTest(c *C) {
+	db, tmpDir, err := sgt.TempDB("sg-river-test")
 	c.Assert(err, IsNil)
 	c.Assert(db.Update(store.Wrap(
 		store.Migrate(store.Version),
-		store.SetupBuckets(stream.StreamBucket),
+		store.SetupBuckets(river.RiverBucket),
 	)), IsNil)
 	s.db, s.tmpDir = db, tmpDir
 }
 
-func (s *StreamSuite) TearDownTest(c *C) {
+func (s *RiverSuite) TearDownTest(c *C) {
 	if db := s.db; db != nil {
 		c.Assert(sgt.CleanupDB(db), IsNil)
 		c.Assert(os.Remove(s.tmpDir), IsNil)
