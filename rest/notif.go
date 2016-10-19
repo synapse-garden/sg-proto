@@ -7,7 +7,7 @@ import (
 	"github.com/synapse-garden/sg-proto/notif"
 	mw "github.com/synapse-garden/sg-proto/rest/middleware"
 	"github.com/synapse-garden/sg-proto/rest/ws"
-	"github.com/synapse-garden/sg-proto/stream"
+	"github.com/synapse-garden/sg-proto/stream/river"
 
 	"github.com/boltdb/bolt"
 	htr "github.com/julienschmidt/httprouter"
@@ -26,9 +26,9 @@ func Notif(r *htr.Router, db *bolt.DB) error {
 func ConnectNotifs(db *bolt.DB) htr.Handle {
 	return func(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 		userID := mw.CtxGetUserID(r)
-		var read stream.SubRiver
+		var read river.Sub
 		err := db.Update(func(tx *bolt.Tx) (e error) {
-			read, e = stream.NewSub(
+			read, e = river.NewSub(
 				notif.River,
 				tx,
 				notif.Topics(userID)...,
@@ -37,7 +37,7 @@ func ConnectNotifs(db *bolt.DB) htr.Handle {
 		})
 
 		switch {
-		case stream.IsMissing(err):
+		case river.IsStreamMissing(err):
 			http.Error(w, errors.Wrap(err,
 				"subscription server not found",
 			).Error(), http.StatusNotFound)

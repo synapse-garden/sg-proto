@@ -10,7 +10,7 @@ import (
 	"github.com/synapse-garden/sg-proto/notif"
 	"github.com/synapse-garden/sg-proto/rest"
 	"github.com/synapse-garden/sg-proto/store"
-	"github.com/synapse-garden/sg-proto/stream"
+	"github.com/synapse-garden/sg-proto/stream/river"
 	sgt "github.com/synapse-garden/sg-proto/testing"
 	"github.com/synapse-garden/sg-proto/users"
 
@@ -49,13 +49,13 @@ func (s *RESTSuite) TestConnectNotifs(c *C) {
 	token2 := base64.StdEncoding.EncodeToString(sesh2.Token)
 
 	// Make two Publishers under bucket "notifs", and one under "brotifs".
-	var pub1, pub2 stream.PubRiver
+	var pub1, pub2 river.Pub
 	c.Assert(s.db.Update(func(tx *bolt.Tx) (err error) {
-		pub1, err = stream.NewPub("pub1", "notifs", tx)
+		pub1, err = river.NewPub("pub1", "notifs", tx)
 		if err != nil {
 			return
 		}
-		pub2, err = stream.NewPub("pub2", "notifs", tx)
+		pub2, err = river.NewPub("pub2", "notifs", tx)
 		if err != nil {
 			return
 		}

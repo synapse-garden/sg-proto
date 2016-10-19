@@ -11,6 +11,7 @@ import (
 	"github.com/synapse-garden/sg-proto/incept"
 	"github.com/synapse-garden/sg-proto/store"
 	"github.com/synapse-garden/sg-proto/stream"
+	"github.com/synapse-garden/sg-proto/stream/river"
 	sgt "github.com/synapse-garden/sg-proto/testing"
 	"github.com/synapse-garden/sg-proto/users"
 
@@ -45,7 +46,7 @@ func (s *RESTSuite) SetUpTest(c *C) {
 			auth.RefreshBucket,
 			auth.ContextBucket,
 			stream.StreamBucket,
-			stream.RiverBucket,
+			river.RiverBucket,
 		),
 	)), IsNil)
 	s.db, s.tmpDir = db, tmpDir

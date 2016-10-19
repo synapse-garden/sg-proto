@@ -6,6 +6,7 @@ import (
 	"github.com/synapse-garden/sg-proto/incept"
 	"github.com/synapse-garden/sg-proto/store"
 	"github.com/synapse-garden/sg-proto/stream"
+	"github.com/synapse-garden/sg-proto/stream/river"
 	"github.com/synapse-garden/sg-proto/users"
 
 	"github.com/boltdb/bolt"
@@ -57,7 +58,7 @@ func Bind(
 		auth.RefreshBucket,
 		auth.ContextBucket,
 		stream.StreamBucket,
-		stream.RiverBucket,
+		river.RiverBucket,
 	)); err != nil {
 		return nil, err
 	}

@@ -10,6 +10,7 @@ import (
 	"github.com/synapse-garden/sg-proto/rest/ws"
 	"github.com/synapse-garden/sg-proto/store"
 	"github.com/synapse-garden/sg-proto/stream"
+	"github.com/synapse-garden/sg-proto/stream/river"
 	"github.com/synapse-garden/sg-proto/users"
 
 	"github.com/boltdb/bolt"
@@ -21,7 +22,7 @@ import (
 
 // Stream sets up the Streams API on the Router for the given DB.
 func Stream(r *htr.Router, db *bolt.DB) error {
-	if err := db.Update(stream.ClearRivers); err != nil {
+	if err := db.Update(river.ClearRivers); err != nil {
 		return err
 	}
 	// vx.y.0:
@@ -124,14 +125,14 @@ func ConnectStream(db *bolt.DB) htr.Handle {
 			return
 		}
 
-		var rv stream.River
+		var rv river.River
 		err = db.Update(func(tx *bolt.Tx) (e error) {
-			rv, e = stream.NewBus(userID, str.ID, tx)
+			rv, e = river.NewBus(userID, str.ID, tx)
 			return
 		})
 
 		switch {
-		case stream.IsRiverExists(err):
+		case river.IsExists(err):
 			http.Error(w, errors.Wrap(
 				err, "failed to start new River",
 			).Error(), http.StatusConflict)
@@ -149,7 +150,7 @@ func ConnectStream(db *bolt.DB) htr.Handle {
 		}.ServeHTTP(w, r)
 
 		err = db.Update(func(tx *bolt.Tx) (e error) {
-			eD := stream.DeleteRiver(userID, str.ID)(tx)
+			eD := river.DeleteRiver(userID, str.ID)(tx)
 			eC := rv.Close()
 			switch {
 			case eD != nil && eC != nil:
