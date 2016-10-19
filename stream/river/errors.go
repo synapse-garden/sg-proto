@@ -31,6 +31,12 @@ func (e errStreamExists) Error() string {
 	return fmt.Sprintf("stream %#q already exists", string(e))
 }
 
+type errUnknownSurvey []byte
+
+func (e errUnknownSurvey) Error() string {
+	return fmt.Sprintf("unkwown survey %#q", []byte(e))
+}
+
 func IsStreamMissing(err error) bool {
 	if err == nil {
 		return false
@@ -44,5 +50,15 @@ func IsStreamExists(err error) bool {
 		return false
 	}
 	_, ok := err.(errStreamExists)
+	return ok
+}
+
+// IsUnknownSurvey returns true if the error is errUnknownSurvey.
+func IsUnknownSurvey(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	_, ok := err.(errUnknownSurvey)
 	return ok
 }
