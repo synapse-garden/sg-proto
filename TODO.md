@@ -152,10 +152,10 @@
 
 ## Code quality / package sanitation
 
+- [x] Split Streams and Rivers
 - [ ] Comment all exported functions, types, methods, and constants
 - [ ] Make sure not just anyone can get a refresh token
 - [ ] Log ERROR statements on all unexpected internal errors
-- [ ] Split Streams and Rivers
 - [ ] Update store.Version
 
 ## GPL
