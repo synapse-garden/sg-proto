@@ -6,7 +6,7 @@ import (
 
 	"github.com/synapse-garden/sg-proto/notif"
 	"github.com/synapse-garden/sg-proto/store"
-	"github.com/synapse-garden/sg-proto/stream"
+	"github.com/synapse-garden/sg-proto/stream/river"
 
 	. "gopkg.in/check.v1"
 )
@@ -22,7 +22,7 @@ func (t *testRiver) Send(bs []byte) error {
 
 func (*testRiver) Close() error { return nil }
 
-var _ = stream.PubRiver(&testRiver{})
+var _ = river.Pub(&testRiver{})
 
 type testResourcer struct {
 	X int `json:"x"`

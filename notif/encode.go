@@ -4,14 +4,14 @@ import (
 	js "encoding/json"
 
 	"github.com/synapse-garden/sg-proto/store"
-	"github.com/synapse-garden/sg-proto/stream"
+	"github.com/synapse-garden/sg-proto/stream/river"
 )
 
 // Encoder is a type implementing an Encode to a River.
 // TODO: Offer Protobuf / Msgpack Encoder
 // TODO: Offer pb / json / mpack Decoder / Translator.
 type Encoder interface {
-	Encode(stream.PubRiver, store.Resourcer, stream.Topic) error
+	Encode(river.Pub, store.Resourcer, river.Topic) error
 }
 
 type json struct{}
@@ -21,7 +21,7 @@ type json struct{}
 var DefaultEncoder = json{}
 
 // Encode implements Encoder on json for DefaultEncoder.
-func (json) Encode(r stream.PubRiver, val store.Resourcer, t UserTopic) error {
+func (json) Encode(r river.Pub, val store.Resourcer, t UserTopic) error {
 	bs, err := js.Marshal(val)
 	if err != nil {
 		return err
@@ -33,11 +33,11 @@ func (json) Encode(r stream.PubRiver, val store.Resourcer, t UserTopic) error {
 	if err != nil {
 		return err
 	}
-	return r.Send(stream.BytesFor(t, boxBs))
+	return r.Send(river.BytesFor(t, boxBs))
 }
 
 // Encode uses the default (JSON) Encoder to send the given value on r,
 // prefixed with t.
-func Encode(r stream.PubRiver, val store.Resourcer, t UserTopic) error {
+func Encode(r river.Pub, val store.Resourcer, t UserTopic) error {
 	return DefaultEncoder.Encode(r, val, t)
 }

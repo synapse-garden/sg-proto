@@ -7,7 +7,7 @@ import (
 
 	"github.com/synapse-garden/sg-proto/notif"
 	"github.com/synapse-garden/sg-proto/store"
-	"github.com/synapse-garden/sg-proto/stream"
+	"github.com/synapse-garden/sg-proto/stream/river"
 	sgt "github.com/synapse-garden/sg-proto/testing"
 
 	"github.com/boltdb/bolt"
@@ -24,7 +24,7 @@ type NotifSuite struct {
 
 var (
 	_ = Suite(&NotifSuite{})
-	_ = stream.Topic(notif.UserTopic{})
+	_ = river.Topic(notif.UserTopic{})
 )
 
 func (s *NotifSuite) SetUpTest(c *C) {
@@ -32,10 +32,7 @@ func (s *NotifSuite) SetUpTest(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(db.Update(store.Wrap(
 		store.Migrate(store.Version),
-		store.SetupBuckets(
-			stream.StreamBucket,
-			stream.RiverBucket,
-		),
+		store.SetupBuckets(river.RiverBucket),
 	)), IsNil)
 	s.db, s.tmpDir = db, tmpDir
 }
@@ -92,6 +89,6 @@ func (s *NotifSuite) TestUserTopicLen(c *C) {
 func (s *NotifSuite) TestTopics(c *C) {
 	// Topics for a given user = a single UserTopic from his name.
 	given := notif.Topics("givenUser")
-	expect := []stream.Topic{notif.MakeUserTopic("givenUser")}
+	expect := []river.Topic{notif.MakeUserTopic("givenUser")}
 	c.Check(given, DeepEquals, expect)
 }

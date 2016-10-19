@@ -3,7 +3,7 @@ package notif
 import (
 	"encoding/base64"
 
-	"github.com/synapse-garden/sg-proto/stream"
+	"github.com/synapse-garden/sg-proto/stream/river"
 
 	blake2b "github.com/minio/blake2b-simd"
 )
@@ -43,6 +43,6 @@ func (t UserTopic) Len() int { return userTopicSize }
 
 // Topics gets the stream.Topics for the given User.  This is currently
 // a single UserTopic for the user.
-func Topics(userID string) []stream.Topic {
-	return []stream.Topic{MakeUserTopic(userID)}
+func Topics(userID string) []river.Topic {
+	return []river.Topic{MakeUserTopic(userID)}
 }
