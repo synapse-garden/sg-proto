@@ -29,18 +29,6 @@ func NewBus(id, streamID string, tx *bolt.Tx) (r River, e error) {
 	}
 	sock.AddTransport(inproc.NewTransport())
 
-	defer func() {
-		if e != nil {
-			if e2 := sock.Close(); e2 != nil {
-				e = errors.Wrapf(e,
-					"error while closing River "+
-						"after error: %s",
-					e2.Error(),
-				)
-			}
-		}
-	}()
-
 	c := b.Cursor()
 	bID := []byte(id)
 	if k, _ := c.Seek(bID); bytes.Equal(bID, k) {
@@ -75,8 +63,16 @@ func NewBus(id, streamID string, tx *bolt.Tx) (r River, e error) {
 			"inproc://%s/%s", streamID, client,
 		))
 		if err != nil {
+			if e2 := sock.Close(); e2 != nil {
+				return nil, errors.Wrapf(e2,
+					"error while closing River "+
+						"after error: %s",
+					err.Error())
+			}
 			return nil, errors.Wrapf(err,
-				"failed to dial client %#q", client)
+				"failed to dial client %#q",
+				client,
+			)
 		}
 	}
 

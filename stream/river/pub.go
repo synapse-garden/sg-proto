@@ -43,17 +43,6 @@ func NewPub(id, streamID string, tx *bolt.Tx) (r Pub, e error) {
 
 	sock.AddTransport(inproc.NewTransport())
 
-	defer func() {
-		if e != nil {
-			if e2 := sock.Close(); e2 != nil {
-				e = errors.Wrapf(e,
-					"error while closing River "+
-						"after error: %s",
-					e.Error())
-			}
-		}
-	}()
-
 	bID := []byte(id)
 	if k, _ := b.Cursor().Seek(bID); bytes.Equal(k, bID) {
 		return nil, errExists(id)
