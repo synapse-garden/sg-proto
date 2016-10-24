@@ -1,6 +1,7 @@
 package river
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/boltdb/bolt"
@@ -41,10 +42,15 @@ func NewBus(id, streamID string, tx *bolt.Tx) (r River, e error) {
 	}()
 
 	c := b.Cursor()
+	bID := []byte(id)
+	if k, _ := c.Seek(bID); bytes.Equal(bID, k) {
+		return nil, errExists(id)
+	}
+
 	var clients [][]byte
 	for k, _ := c.First(); ; k, _ = c.Next() {
 		if k == nil {
-			if err = b.Put([]byte(id), nil); err != nil {
+			if err = b.Put(bID, nil); err != nil {
 				return nil, errors.Wrap(err,
 					"failed to write river to DB")
 			}

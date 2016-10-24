@@ -1,6 +1,8 @@
 package river
 
 import (
+	"bytes"
+
 	"github.com/boltdb/bolt"
 	"github.com/go-mangos/mangos"
 	"github.com/go-mangos/mangos/protocol/pub"
@@ -52,11 +54,12 @@ func NewPub(id, streamID string, tx *bolt.Tx) (r Pub, e error) {
 		}
 	}()
 
-	if b.Get([]byte(id)) != nil {
+	bID := []byte(id)
+	if k, _ := b.Cursor().Seek(bID); bytes.Equal(k, bID) {
 		return nil, errExists(id)
 	}
 
-	if err = b.Put([]byte(id), nil); err != nil {
+	if err = b.Put(bID, nil); err != nil {
 		return nil, errors.Wrap(err,
 			"failed to write river to DB")
 	}
