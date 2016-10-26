@@ -3,10 +3,10 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "BGkSDRxXtBMXnBTlTg5d8/N8GVQ=",
+			"checksumSHA1": "er0In+egNah0T3R28reEOx/0Rqg=",
 			"path": "github.com/boltdb/bolt",
-			"revision": "583e8937c61f1af6513608ccc75c97b6abdf4ff9",
-			"revisionTime": "2016-08-18T17:01:52Z",
+			"revision": "074dffcc83e9f421e261526d297cd93f22a34080",
+			"revisionTime": "2016-10-08T15:24:23Z",
 			"tree": true
 		},
 		{
