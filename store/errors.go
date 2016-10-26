@@ -2,6 +2,20 @@ package store
 
 import "fmt"
 
+type ErrMissingBucket []byte
+
+func (e ErrMissingBucket) Error() string {
+	return fmt.Sprintf("no such bucket %#q", string(e))
+}
+
+func IsMissingBucket(err error) bool {
+	if err == nil {
+		return false
+	}
+	_, ok := err.(ErrMissingBucket)
+	return ok
+}
+
 type KeyError struct {
 	Key, Bucket []byte
 }

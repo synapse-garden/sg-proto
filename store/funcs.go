@@ -79,3 +79,30 @@ func CheckNotExist(b Bucket, key []byte) func(*bolt.Tx) error {
 		return nil
 	}
 }
+
+// GetNestedBucket attempts to get the nested Bucket from the given
+// Bucket, returning an error if it is missing.
+func GetNestedBucket(b *bolt.Bucket, buckets ...Bucket) (*bolt.Bucket, error) {
+	result := b
+	for _, bk := range buckets {
+		if result = result.Bucket(bk); result == nil {
+			return nil, ErrMissingBucket(bk)
+		}
+	}
+	return result, nil
+}
+
+// MakeNestedBucket creates the given Buckets on the given Bucket if
+// they do not exist, returning any error, or the innermost nested
+// Bucket.
+func MakeNestedBucket(b *bolt.Bucket, buckets ...Bucket) (*bolt.Bucket, error) {
+	result := b
+	var err error
+	for _, bk := range buckets {
+		result, err = result.CreateBucketIfNotExists(bk)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
+}
