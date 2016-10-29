@@ -11,6 +11,7 @@
 - [ ] Versioned REST API?
 - [ ] Apple / etc Push API?
 - [ ] Distributed storage?
+  - [ ] If so, MUST revise Surv / Resp rivers!!!
 - [ ] Cassandra / etc bigtable backend?
 - [ ] Offer River connections besides Websocket?
 - [ ] Consider package-global caching optimizations to things such as
@@ -86,29 +87,39 @@
 
 ## Unorganized
 
-- [ ] The design of Rivers supports a future implementation which
+- [ ] Organize TODOs
+
+- [ ] ws.HangupRecver a horrible mess.  Do something better, for the
+      love of God!
+- [ ] REST Stream tests brittle
+- [ ] Survey response errors need a useful error implementation.
+- [x] The design of Rivers must support a future implementation which
       permits the API to use req/rep Rivers to control the behavior of
 	  receivers.
 - [x] Reorganize streams package with more abstraction
 - [ ] Swagger HTTP API doc
 - [x] Standardize on JSON camelCase vs snake_case etc
-- [ ] Organize TODOs
 - [ ] Poms / some kind of work measure
 - [ ] Some kind of psych features
 - [ ] Make a decision on Rust
 - [ ] Switch to encoding/gob instead of JSON on the backend and benchmark it
-- [ ] Store tests
+  - [ ] Why not protobuf, msgpack, colfer, capnproto?
+  - [ ] Some other dynamic schema?
+  - [ ] Make a simple call and defer this decision.
+- [ ] "store" package tests
 - [ ] Make a call about frontend hashing.  Do we really want to?
       Not really secure unless salted, and even then it's "just another password".
 - [ ] https://cdn.jsdelivr.net/sjcl/1.0.4/sjcl.js for browser
       http://jsfiddle.net/kRcNK/40/
 - [ ] Scour for cases where Put or Marshal could fail and return credentials
+  - [ ] ???
 - [ ] Return x.ErrMissing, not store.ErrMissing, in Unmarshal cases
 - [ ] User logout by uname + pwhash (DELETE /tokens ?)
-  - [ ] Lookup from username to session
+  - [x] Lookup from username to session
 - [ ] Users can GET /streams with search parameters
 - [ ] More streams abstraction (better Filters, IsMember, etc. moved into package API)
 - [ ] Make plan to reduce / eliminate rest.Stream API redundancy
+  - [ ] ???
 - [ ] Make plan to reduce all rest redundancy
 - [ ] Chat endpoint which uses rest.ConnectStream with a river.Messager under the hood!
 - [ ] Sanely handle stream errors
@@ -128,6 +139,13 @@
 - [x] Can't log out because session is not URL-encoded
 - [x] River Bind never returns, so River is never cleaned up
 - [x] Fix failing or blocking tests
+- [x] Bus and Sub Rivers must never overwrite existing IDs
+- [x] river.Surveyor and river.Respondent require a slight pause between
+      Dial and usage.  Data race found due to mangos Init!
+	  https://github.com/go-mangos/mangos/issues/236
+- [ ] Surveyor / Respondent don't keep track of who's still alive.  If a
+      Responder removes itself from its bucket, the Survey will fail.
+- [ ] If a survey has a problem, responders are in an unknown state.
 - [ ] Refresh tokens must be concatenated to auth tokens in header
 - [ ] Refresh tokens must not zombify expired auth tokens, instead
       create new tokens
@@ -136,6 +154,8 @@
 - [ ] Performance is terrible (~30ms on GET on /source???)
   - [ ] Is it just Postman?
   - [ ] Benchmarking?
+  - [ ] Bolt?
+    - [ ] Configure cache settings?
 - [ ] Deleting the user's profile doesn't eliminate his owned objects.
 - [ ] Deleting the user's profile doesn't close his Streams.
 - [ ] Bad usernames cannot be looked up for expired Sessions
@@ -195,9 +215,9 @@
 - [x] Stream REST API
 - [x] Users can GET /streams they belong to, not just Streams they own
 - [x] SSL "wss" works correctly
+- [x] Multiple Bus Rivers per Stream per User
+- [ ] Close running stream from API (use Survey/Resp)
 - [ ] Use https://golang.org/pkg/net/http/httptrace/ for REST test
-- [ ] Multiple Rivers per Stream per User
-- [ ] Close running stream from API
 - [ ] Inactive Rivers eventually time out
 
 ## Notifications
