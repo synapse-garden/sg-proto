@@ -2,6 +2,7 @@ package rest_test
 
 import (
 	"encoding/base64"
+	"io/ioutil"
 	"net/http"
 	htt "net/http/httptest"
 	"net/url"
@@ -9,10 +10,13 @@ import (
 	"github.com/synapse-garden/sg-proto/auth"
 	"github.com/synapse-garden/sg-proto/incept"
 	"github.com/synapse-garden/sg-proto/rest"
+	"github.com/synapse-garden/sg-proto/store"
 	"github.com/synapse-garden/sg-proto/stream"
+	"github.com/synapse-garden/sg-proto/stream/river"
 	sgt "github.com/synapse-garden/sg-proto/testing"
 	"github.com/synapse-garden/sg-proto/users"
 
+	"github.com/boltdb/bolt"
 	"github.com/julienschmidt/httprouter"
 	uuid "github.com/satori/go.uuid"
 	ws "golang.org/x/net/websocket"
@@ -59,22 +63,58 @@ func (s *RESTSuite) TestStream(c *C) {
 
 	// Get a new ws connection for each user.
 	conn1 := getWSClient(c, token1, srv.URL+"/streams/"+str.ID+"/start")
+	conn1b := getWSClient(c, token1, srv.URL+"/streams/"+str.ID+"/start")
 	conn2 := getWSClient(c, token2, srv.URL+"/streams/"+str.ID+"/start")
 
-	// Any sent message should be echoed.
+	// Any sent message should be echoed to all receivers.
 	c.Assert(ws.JSON.Send(conn1, &stream.Message{Content: "hello1"}), IsNil)
+	c.Assert(ws.JSON.Send(conn1b, &stream.Message{Content: "hello1b"}), IsNil)
 	c.Assert(ws.JSON.Send(conn2, &stream.Message{Content: "hello2"}), IsNil)
 
+	seen := make(map[string]map[string]int)
+	expect := map[string]map[string]int{
+		"conn1":  {"hello1b": 1, "hello2": 1},
+		"conn1b": {"hello1": 1, "hello2": 1},
+		"conn2":  {"hello1b": 1, "hello1": 1},
+	}
+
 	msg := new(stream.Message)
-	c.Assert(ws.JSON.Receive(conn1, msg), IsNil)
-	c.Check(msg.Content, Equals, "hello2")
-	c.Check(msg.Kind, Equals, 0)
-	c.Assert(ws.JSON.Receive(conn2, msg), IsNil)
-	c.Check(msg.Content, Equals, "hello1")
-	c.Check(msg.Kind, Equals, 0)
+	for _, conn := range []struct {
+		name string
+		*ws.Conn
+	}{
+		{"conn1", conn1}, {"conn1", conn1},
+		{"conn1b", conn1b}, {"conn1b", conn1b},
+		{"conn2", conn2}, {"conn2", conn2},
+	} {
+		c.Assert(ws.JSON.Receive(conn.Conn, msg), IsNil)
+		if _, ok := seen[conn.name]; !ok {
+			seen[conn.name] = make(map[string]int)
+		}
+		seen[conn.name][msg.Content]++
+		c.Check(msg.Kind, Equals, 0)
+	}
+
+	c.Check(seen, DeepEquals, expect)
 
 	conn1.Close()
-	conn2.Close()
+	conn1b.Close()
+
+	var surv river.Surveyor
+	c.Assert(s.db.Update(func(tx *bolt.Tx) (e error) {
+		surv, e = river.NewSurvey(tx,
+			sgt.ShortWait,
+			river.HangupBucket,
+			store.Bucket(str.ID),
+			store.Bucket("bob"),
+		)
+		return
+	}), IsNil)
+
+	c.Assert(river.MakeSurvey(surv, river.HUP, river.OK), IsNil)
+	bs, err := ioutil.ReadAll(conn2)
+	c.Check(string(bs), Equals, "stream hung up: EOF")
+	c.Check(err, IsNil) // Note that nil = io.EOF in io.ReadAll.
 }
 
 func getWSClient(c *C, token, urlStr string) *ws.Conn {

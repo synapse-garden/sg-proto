@@ -125,7 +125,38 @@ func ConnectStream(db *bolt.DB) htr.Handle {
 			return
 		}
 
-		var rv river.River
+		// Create a new river.Responder to respond to hangup
+		// requests from the backend.
+		var rsp river.Responder
+		err = db.Update(func(tx *bolt.Tx) (e error) {
+			rsp, e = river.NewResponder(tx,
+				river.HangupBucket,
+				store.Bucket(str.ID),
+				store.Bucket(userID),
+			)
+			return
+		})
+		switch {
+		case river.IsExists(err):
+			http.Error(w, errors.Wrap(
+				err, "failed to start new River",
+			).Error(), http.StatusConflict)
+			return
+		case err != nil:
+			http.Error(w, errors.Wrap(
+				err, "failed to start new River",
+			).Error(), http.StatusInternalServerError)
+			return
+		}
+
+		h := ws.MakeHangup(rsp, nil)
+		errCh := make(chan error)
+		go func() {
+			// Start a survey waiting for hangup.
+			errCh <- river.AwaitHangup(h)
+		}()
+
+		var rv river.Bus
 		err = db.Update(func(tx *bolt.Tx) (e error) {
 			rv, e = river.NewBus(userID, str.ID, tx)
 			return
@@ -146,12 +177,32 @@ func ConnectStream(db *bolt.DB) htr.Handle {
 
 		xws.Server{
 			Handshake: ws.Check,
-			Handler:   ws.Bind(rv, ws.DefaultRead),
+			// Use the HangupRecver.Read to hang up the
+			// river if a hangup survey is received.
+			Handler: ws.Bind(rv, h.Read),
 		}.ServeHTTP(w, r)
 
 		err = db.Update(func(tx *bolt.Tx) (e error) {
-			eD := river.DeleteRiver(userID, str.ID)(tx)
+			eD := river.DeleteBus(userID, str.ID, rv.ID())(tx)
 			eC := rv.Close()
+			switch {
+			case eD != nil && eC != nil:
+				e = errors.Wrap(eC, eD.Error())
+				return
+			case eD != nil:
+				e = eD
+				return
+			case eC != nil:
+				e = eC
+				return
+			}
+			eD = river.DeleteResp(tx, h.ID(),
+				river.HangupBucket,
+				store.Bucket(str.ID),
+				store.Bucket(userID),
+			)
+			eC = rsp.Close()
+			<-errCh
 			switch {
 			case eD != nil && eC != nil:
 				e = errors.Wrap(eC, eD.Error())
