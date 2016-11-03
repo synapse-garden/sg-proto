@@ -61,7 +61,9 @@ func NewSub(
 	c := b.Cursor()
 	var servers [][]byte
 	for k, _ := c.First(); k != nil; k, _ = c.Next() {
-		servers = append(servers, k)
+		next := make([]byte, len(k))
+		copy(next, k)
+		servers = append(servers, next)
 	}
 
 	if len(topics) == 0 {
