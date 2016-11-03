@@ -1,13 +1,13 @@
 package river_test
 
 import (
-	"errors"
 	"time"
 
 	"github.com/synapse-garden/sg-proto/stream/river"
 	"github.com/synapse-garden/sg-proto/testing"
 
 	"github.com/boltdb/bolt"
+	"github.com/pkg/errors"
 	. "gopkg.in/check.v1"
 )
 
@@ -117,12 +117,13 @@ func tryRecv(c *C, m <-chan []byte, errs <-chan error) []byte {
 	case err := <-errs:
 		c.Logf("unexpected error received: %#v", err.Error())
 		c.FailNow()
-	case <-time.After(testing.ShortWait):
+		return nil
+	case <-time.After(testing.LongWait):
 		c.Logf("failed to receive message after %s timeout",
-			testing.ShortWait.String())
+			testing.LongWait.String())
 		c.FailNow()
+		return nil
 	}
-	return nil
 }
 
 func tryNotRecv(c *C, m <-chan []byte, errs <-chan error) {
@@ -164,7 +165,9 @@ func checkMessagesRecvd(c *C,
 	}
 
 	for i := 0; i < len(msgs); i++ {
-		got[string(tryRecv(c, m, errs))]++
+		next := string(tryRecv(c, m, errs))
+		c.Logf("saw value %#q", next)
+		got[next]++
 	}
 	tryNotRecv(c, m, errs)
 }

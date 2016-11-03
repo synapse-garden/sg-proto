@@ -48,12 +48,3 @@ func ClearRivers(tx *bolt.Tx) error {
 		return nil
 	})
 }
-
-// DeleteRiver deletes the River from the database.  It must be used
-// within a transaction where the River is also closed.
-func DeleteRiver(id, streamID string) func(*bolt.Tx) error {
-	return func(tx *bolt.Tx) error {
-		b := tx.Bucket(RiverBucket).Bucket([]byte(streamID))
-		return b.Delete([]byte(id))
-	}
-}

@@ -1,6 +1,10 @@
 package river
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/go-mangos/mangos"
+)
 
 func MakeRiverExistsErr(id string) error {
 	return errExists(id)
@@ -33,5 +37,12 @@ func MakeSub(r Sub, ts ...Topic) sub {
 	return sub{
 		Sub:    r,
 		topics: topics,
+	}
+}
+
+func MakeBus(r mangos.Socket, id uint64) bus {
+	return bus{
+		Socket: r,
+		id:     id,
 	}
 }
