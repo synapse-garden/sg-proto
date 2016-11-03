@@ -17,38 +17,52 @@
 			"tree": true
 		},
 		{
-			"checksumSHA1": "iJdDp5m6MIjMPKCOxFMvl7jEJ/Y=",
+			"checksumSHA1": "rDx1QhM6UDraFxaRgAjdoHCYh74=",
 			"path": "github.com/go-mangos/mangos",
-			"revision": "c3916ba23b3aa721fd13b4dec916b2d15f4a2520",
-			"revisionTime": "2016-07-19T02:05:16Z",
+			"revision": "68cfb1bd7d1f6e9958c23a6615339815187cf011",
+			"revisionTime": "2016-10-28T20:22:51Z",
 			"tree": true
 		},
 		{
-			"checksumSHA1": "bCABisMlBcpDa8h9npMeYZVcHHk=",
+			"checksumSHA1": "14BDAQQmvj2Tz1943Q4ATrSWhdg=",
 			"path": "github.com/go-mangos/mangos/protocol/bus",
-			"revision": "c3916ba23b3aa721fd13b4dec916b2d15f4a2520",
-			"revisionTime": "2016-07-19T02:05:16Z",
+			"revision": "68cfb1bd7d1f6e9958c23a6615339815187cf011",
+			"revisionTime": "2016-10-28T20:22:51Z",
 			"tree": true
 		},
 		{
-			"checksumSHA1": "MmHghN8jA3dtjd5O17EKE5I+ODE=",
+			"checksumSHA1": "hKTt3jIni1paCwD59IxQ0ZStqYk=",
 			"path": "github.com/go-mangos/mangos/protocol/pub",
-			"revision": "c3916ba23b3aa721fd13b4dec916b2d15f4a2520",
-			"revisionTime": "2016-07-19T02:05:16Z",
+			"revision": "68cfb1bd7d1f6e9958c23a6615339815187cf011",
+			"revisionTime": "2016-10-28T20:22:51Z",
 			"tree": true
 		},
 		{
-			"checksumSHA1": "Jq6TpwsJA3GZI9ZciK/cmG1dYrM=",
+			"checksumSHA1": "M/xWQk+Cv3tAcBCEjNj2IDRGllE=",
+			"path": "github.com/go-mangos/mangos/protocol/respondent",
+			"revision": "68cfb1bd7d1f6e9958c23a6615339815187cf011",
+			"revisionTime": "2016-10-28T20:22:51Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "vN9oWDsOTIcgkFwSlzbIClyoU/w=",
 			"path": "github.com/go-mangos/mangos/protocol/sub",
-			"revision": "c3916ba23b3aa721fd13b4dec916b2d15f4a2520",
-			"revisionTime": "2016-07-19T02:05:16Z",
+			"revision": "68cfb1bd7d1f6e9958c23a6615339815187cf011",
+			"revisionTime": "2016-10-28T20:22:51Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "XXK6UPWfycdMxcEiF5d01cP/bLE=",
+			"path": "github.com/go-mangos/mangos/protocol/surveyor",
+			"revision": "68cfb1bd7d1f6e9958c23a6615339815187cf011",
+			"revisionTime": "2016-10-28T20:22:51Z",
 			"tree": true
 		},
 		{
 			"checksumSHA1": "7NRp/7iQJtQ8HcjwXGtAQzva/b8=",
 			"path": "github.com/go-mangos/mangos/transport/inproc",
-			"revision": "c3916ba23b3aa721fd13b4dec916b2d15f4a2520",
-			"revisionTime": "2016-07-19T02:05:16Z",
+			"revision": "68cfb1bd7d1f6e9958c23a6615339815187cf011",
+			"revisionTime": "2016-10-28T20:22:51Z",
 			"tree": true
 		},
 		{
