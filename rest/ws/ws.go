@@ -1,7 +1,6 @@
 package ws
 
 import (
-	"io"
 	"log"
 	"net/http"
 
@@ -65,75 +64,31 @@ func DefaultRead(c *xws.Conn) ([]byte, bool, error) {
 
 // Bind routes messages and errors between a SendRecver and a websocket
 // connection.
-//
-// TODO: Tighten this up.  A lot.
 func Bind(sr SendRecver, read SocketReader) xws.Handler {
 	if read == nil {
 		read = DefaultRead
 	}
 	return func(c *xws.Conn) {
-		done, fail := make(chan struct{}), make(chan struct{})
-		errs := make(chan error, 10)
+		ch := chans{
+			Conn:       c,
+			SendRecver: sr,
 
-		go func() {
-			defer close(fail)
-			// Receive from sr; pass result to c Write.
-			for {
-				select {
-				case err := <-errs:
-					_, err = c.Write([]byte(err.Error()))
-					if err != nil {
-						return
-					}
-				case <-done:
-					return
-				default:
-				}
-
-				if bs, err := sr.Recv(); err != nil {
-					return
-				} else if _, err = c.Write(bs); err != nil {
-					return
-				}
-			}
-		}()
-
-		go func() {
-			defer close(done)
-			// Receive from websocket; pass result to sr Send.
-			for {
-				select {
-				case <-fail:
-					return
-				default:
-				}
-				if bs, ok, err := read(c); err == io.EOF {
-					// Websocket was closed.
-					return
-				} else if err != nil {
-					log.Printf("failed to read from socket: %s", err.Error())
-					return
-				} else if !ok {
-					// Formatting error.  Tell the
-					// frontend, then move on.
-					errs <- err
-				} else if err = sr.Send(bs); err != nil {
-					log.Printf("failed to send to Sender: %s", err.Error())
-					return
-				}
-			}
-		}()
-
-		<-done
-
-		if err := c.Close(); err != nil {
-			log.Printf("failed to close Websocket: %s", err.Error())
+			errs: make(chan error, 10),
+			done: make(chan struct{}),
+			fail: make(chan struct{}),
 		}
+
+		go ch.RecvWrite()
+		go ch.ReadSend(read)
+
+		<-ch.done
+		c.Close()
 	}
 }
 
-// BindRead receives messages from the websocket SendRecver and a
-// websocket connection.
+// BindRead receives messages from a Recver and writes them to the Conn.
+// It should be used in place of Bind for one-way messaging from the
+// backend to the websocket client.
 func BindRead(r Recver) xws.Handler {
 	return func(c *xws.Conn) {
 		// Recv from r; pass result to c Write if no error.
