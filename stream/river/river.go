@@ -3,15 +3,8 @@ package river
 import (
 	"bytes"
 
-	"github.com/synapse-garden/sg-proto/store"
-
 	"github.com/boltdb/bolt"
 )
-
-// RiverBucket stores Rivers and their users.  Buckets in RiverBucket
-// correspond to Streams from StreamBucket by ID, and every River ID in
-// the bucket corresponds to a connected River.
-var RiverBucket = store.Bucket("rivers")
 
 // River is a simplified sender and receiver which can be implemented by
 // mangos.Socket.
