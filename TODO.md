@@ -89,6 +89,7 @@
 
 - [ ] Organize TODOs
 
+- [ ] Test notif hangups
 - [ ] Make a helper function to make hangups easier to use.
 - [ ] ws.HangupSender a horrible mess.  Do something better, for the
       love of God!
