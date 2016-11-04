@@ -7,6 +7,7 @@ import (
 	"github.com/synapse-garden/sg-proto/notif"
 	mw "github.com/synapse-garden/sg-proto/rest/middleware"
 	"github.com/synapse-garden/sg-proto/rest/ws"
+	"github.com/synapse-garden/sg-proto/store"
 	"github.com/synapse-garden/sg-proto/stream/river"
 
 	"github.com/boltdb/bolt"
@@ -26,8 +27,27 @@ func Notif(r *htr.Router, db *bolt.DB) error {
 func ConnectNotifs(db *bolt.DB) htr.Handle {
 	return func(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 		userID := mw.CtxGetUserID(r)
-		var read river.Sub
+
+		// Create a new river.Responder to respond to hangup
+		// requests from the backend.
+		var rsp river.Responder
 		err := db.Update(func(tx *bolt.Tx) (e error) {
+			rsp, e = river.NewResponder(tx,
+				river.HangupBucket,
+				river.ResponderBucket,
+				store.Bucket(userID),
+			)
+			return
+		})
+		if err != nil {
+			http.Error(w, errors.Wrap(
+				err, "failed to start new River",
+			).Error(), http.StatusInternalServerError)
+			return
+		}
+
+		var read river.Sub
+		err = db.Update(func(tx *bolt.Tx) (e error) {
 			read, e = river.NewSub(
 				notif.River,
 				tx,
@@ -50,14 +70,34 @@ func ConnectNotifs(db *bolt.DB) htr.Handle {
 			return
 		}
 
+		h := ws.MakeHangupRecver(rsp, read)
+		errCh := make(chan error)
+		go func() {
+			// Start a survey waiting for hangup.
+			errCh <- river.AwaitHangup(h)
+		}()
+
 		xws.Server{
 			Handshake: ws.Check,
-			Handler:   ws.BindRead(read),
+			Handler:   ws.BindRead(h.Recver()),
 		}.ServeHTTP(w, r)
 
-		if err := read.Close(); err != nil {
-			log.Printf("ERROR: failed to Close River: %s", err.Error())
-			http.Error(w, "failed to close River", http.StatusInternalServerError)
+		err = db.Update(func(tx *bolt.Tx) error {
+			read.Close()
+			rsp.Close()
+			<-errCh
+
+			return river.DeleteResp(tx, h.ID(),
+				river.HangupBucket,
+				river.ResponderBucket,
+				store.Bucket(userID),
+			)
+		})
+		if err != nil {
+			http.Error(w, errors.Wrap(
+				err, "failed to clean up notif River",
+			).Error(), http.StatusInternalServerError)
+			return
 		}
 	}
 }
