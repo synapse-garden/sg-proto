@@ -89,7 +89,8 @@
 
 - [ ] Organize TODOs
 
-- [ ] ws.HangupRecver a horrible mess.  Do something better, for the
+- [ ] Make a helper function to make hangups easier to use.
+- [ ] ws.HangupSender a horrible mess.  Do something better, for the
       love of God!
 - [ ] REST Stream tests brittle
 - [ ] Survey response errors need a useful error implementation.
@@ -173,6 +174,7 @@
 ## Code quality / package sanitation
 
 - [x] Split Streams and Rivers
+- [ ] Update README.md and CONTRIBUTING.md
 - [ ] Comment all exported functions, types, methods, and constants
 - [ ] Make sure not just anyone can get a refresh token
 - [ ] Log ERROR statements on all unexpected internal errors
@@ -242,6 +244,7 @@
 - [x] Topics are loaded by the sub river from a user bucket in streams.
       I.e., at an API level, the notification rivers belonging to the
 	  user are interfaced via a single Stream having the user's ID.
+- [x] Notifs can be hung up.
 
 ## Chat
 
