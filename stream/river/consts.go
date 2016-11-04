@@ -19,6 +19,9 @@ var (
 	// the bucket corresponds to a connected River.
 	RiverBucket = store.Bucket("rivers")
 
+	// ResponderBucket is where Responders are kept, for hangup.
+	ResponderBucket = store.Bucket("responders")
+
 	// HangupBucket is where Respondents are stored.  Pass this to
 	// NewSurvey as the first Bucket argument for most Surveys.
 	HangupBucket = store.Bucket("hangups")
