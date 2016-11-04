@@ -177,7 +177,7 @@ func ConnectStream(db *bolt.DB) htr.Handle {
 
 		xws.Server{
 			Handshake: ws.Check,
-			// Use the HangupRecver.Read to hang up the
+			// Use the HangupSender.Read to hang up the
 			// river if a hangup survey is received.
 			Handler: ws.Bind(rv, h.Read),
 		}.ServeHTTP(w, r)

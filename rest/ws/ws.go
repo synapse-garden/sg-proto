@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"io"
 	"log"
 	"net/http"
 
@@ -34,6 +35,11 @@ type Recver interface {
 
 type SendRecver interface {
 	Sender
+	Recver
+}
+
+type RecvCloser interface {
+	io.Closer
 	Recver
 }
 

@@ -10,41 +10,41 @@ import (
 	xws "golang.org/x/net/websocket"
 )
 
-// HangupRecver is a Responder river which closes its signal channel
+// HangupSender is a Responder river which closes its signal channel
 // after Sending.
-type HangupRecver struct {
+type HangupSender struct {
 	river.Responder
 	sr     SocketReader
 	signal chan struct{}
 }
 
-// MakeHangup creates a new HangupRecver from the given river.Responder
+// MakeHangup creates a new HangupSender from the given river.Responder
 // and SocketReader.  If the SocketReader is nil, DefaultReader will be
 // used.
-func MakeHangup(r river.Responder, sr SocketReader) HangupRecver {
+func MakeHangup(r river.Responder, sr SocketReader) HangupSender {
 	if sr == nil {
 		sr = DefaultRead
 	}
-	return HangupRecver{
+	return HangupSender{
 		Responder: r,
 		sr:        sr,
 		signal:    make(chan struct{}),
 	}
 }
 
-// Send implements river.Responder.Send on HangupRecver, closing its
+// Send implements river.Responder.Send on HangupSender, closing its
 // signal channel and calling Send on the underlying Responder.  Make
 // sure this is only called once.
-func (h HangupRecver) Send(msg []byte) error {
+func (h HangupSender) Send(msg []byte) error {
 	close(h.signal)
 	return h.Responder.Send(msg)
 }
 
-// Read is a SocketReader which returns io.EOF when the HangupRecver
+// Read is a SocketReader which returns io.EOF when the HangupSender
 // has Sent and closes the Conn.
 //
 // TODO: Tighten this up a lot!
-func (h HangupRecver) Read(c *xws.Conn) (bs []byte, ok bool, e error) {
+func (h HangupSender) Read(c *xws.Conn) (bs []byte, ok bool, e error) {
 	done := make(chan struct{})
 	select {
 	case <-h.signal:
@@ -78,4 +78,68 @@ func (h HangupRecver) Read(c *xws.Conn) (bs []byte, ok bool, e error) {
 		}()
 		return h.sr(c)
 	}
+}
+
+// HangupRecver is a type which is hung up when it sends its response,
+// and upon being hung up, will close the River socket used in its Recv.
+type HangupRecver struct {
+	river.Responder
+
+	socket RecvCloser
+	signal chan struct{}
+}
+
+// hangupRecver wraps the given Recver with a closable signal channel
+// for hangup.
+type hangupRecver struct {
+	RecvCloser
+	signal chan struct{}
+}
+
+// Recv implements Recver on hangupRecver.  If its signal channel is
+// closed, it will close the underlying RecvCloser.
+func (h hangupRecver) Recv() ([]byte, error) {
+	done := make(chan struct{})
+	select {
+	case <-h.signal:
+		return nil, errors.Wrap(io.EOF, "stream hung up")
+	default:
+	}
+	go func() {
+		select {
+		case <-h.signal:
+			h.Close()
+		case <-done:
+		}
+	}()
+	defer close(done)
+	return h.RecvCloser.Recv()
+}
+
+// MakeHangupRecver makes a new HangupRecver which will close its Recver
+// socket when it responds to a hangup Survey.
+func MakeHangupRecver(rsp river.Responder, r RecvCloser) HangupRecver {
+	signal := make(chan struct{})
+	return HangupRecver{
+		Responder: rsp,
+		socket: hangupRecver{
+			RecvCloser: r,
+			signal:     signal,
+		},
+		signal: signal,
+	}
+}
+
+// Send implements Responder.Send on HangupRecver, closing its signal
+// channel and calling Send on the underlying Responder.  Make sure this
+// is only called once!
+func (h HangupRecver) Send(bs []byte) error {
+	close(h.signal)
+	return h.Responder.Send(bs)
+}
+
+// Recver returns the HangupRecver's Recv socket, which is closed when
+// the HangupRecver replies to a hangup survey.
+func (h HangupRecver) Recver() Recver {
+	return h.socket
 }
