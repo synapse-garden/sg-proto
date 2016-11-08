@@ -3,7 +3,6 @@ package rest_test
 import (
 	"encoding/base64"
 	"io/ioutil"
-	"net/http"
 	htt "net/http/httptest"
 	"net/url"
 
@@ -40,8 +39,8 @@ func (s *RESTSuite) TestStream(c *C) {
 	sesh1, sesh2 := new(auth.Session), new(auth.Session)
 	c.Assert(sgt.GetSession(user1.Name, sesh1, s.db), IsNil)
 	c.Assert(sgt.GetSession(user2.Name, sesh2, s.db), IsNil)
-	token1 := base64.StdEncoding.EncodeToString(sesh1.Token)
-	token2 := base64.StdEncoding.EncodeToString(sesh2.Token)
+	token1 := base64.RawURLEncoding.EncodeToString(sesh1.Token)
+	token2 := base64.RawURLEncoding.EncodeToString(sesh2.Token)
 
 	r := httprouter.New()
 	c.Assert(rest.Stream(r, s.db), IsNil)
@@ -126,9 +125,7 @@ func getWSClient(c *C, token, urlStr string) *ws.Conn {
 		Location: urlLoc,
 		Origin:   &url.URL{},
 		Version:  ws.ProtocolVersionHybi13,
-		Header: http.Header{
-			"Authorization": {"Bearer " + token},
-		},
+		Protocol: []string{"Bearer+" + token},
 	})
 	c.Assert(err, IsNil)
 

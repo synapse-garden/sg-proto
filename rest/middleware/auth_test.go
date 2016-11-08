@@ -5,17 +5,20 @@ import (
 	"fmt"
 	"net/http"
 	htt "net/http/httptest"
+	"net/url"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/synapse-garden/sg-proto/auth"
 	"github.com/synapse-garden/sg-proto/rest/middleware"
+	"github.com/synapse-garden/sg-proto/rest/ws"
 	"github.com/synapse-garden/sg-proto/store"
 	sgt "github.com/synapse-garden/sg-proto/testing"
 
 	"github.com/boltdb/bolt"
 	"github.com/julienschmidt/httprouter"
+	xws "golang.org/x/net/websocket"
 	. "gopkg.in/check.v1"
 )
 
@@ -74,6 +77,53 @@ func (s *MiddlewareSuite) TestAuthUser(c *C) {
 	// A request to an endpoint with the given auth scheme should
 	// be rejected if header["Authorization"] is not "Bearer" and
 	// present in the database.
+}
+
+func (s *MiddlewareSuite) TestAuthWS(c *C) {
+	sess := &auth.Session{}
+	c.Assert(s.db.Update(auth.NewSession(
+		sess,
+		time.Now().Add(1*time.Hour),
+		time.Hour,
+		auth.NewToken(auth.BearerType),
+		auth.NewToken(auth.RefreshType),
+		"friendo",
+	)), IsNil)
+
+	validToken := base64.RawURLEncoding.EncodeToString(sess.Token)
+	c.Logf("valid WS token (base64.RawURLEncoding): %#q", validToken)
+
+	h := func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		userID := middleware.CtxGetUserID(r)
+		c.Check(userID, Equals, "friendo")
+		xws.Server{
+			Handshake: ws.Check,
+			Handler: func(c *xws.Conn) {
+				c.Write([]byte(`"hello ` + userID + `"`))
+				c.Close()
+			},
+		}.ServeHTTP(w, r)
+	}
+	rt := httprouter.New()
+	rt.GET("/foo", middleware.AuthWSUser(h, s.db, middleware.CtxSetUserID))
+	srv := htt.NewServer(rt)
+
+	wsURL, err := url.Parse(srv.URL + "/foo")
+	c.Assert(err, IsNil)
+	wsURL.Scheme = "ws"
+
+	conn, err := xws.DialConfig(&xws.Config{
+		Location: wsURL,
+		Origin:   &url.URL{},
+		Version:  xws.ProtocolVersionHybi13,
+		// {"Sec-WebSocket-Protocol": "Bearer+12345,..."
+		Protocol: []string{"Bearer+" + validToken},
+	})
+	c.Assert(err, IsNil)
+
+	var got string
+	c.Assert(xws.JSON.Receive(conn, &got), IsNil)
+	c.Check(got, Equals, "hello friendo")
 }
 
 func (s *MiddlewareSuite) TestGetToken(c *C) {

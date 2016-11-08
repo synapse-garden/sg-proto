@@ -45,8 +45,8 @@ func (s *RESTSuite) TestConnectNotifs(c *C) {
 	sesh1, sesh2 := new(auth.Session), new(auth.Session)
 	c.Assert(sgt.GetSession(user1.Name, sesh1, s.db), IsNil)
 	c.Assert(sgt.GetSession(user2.Name, sesh2, s.db), IsNil)
-	token1 := base64.StdEncoding.EncodeToString(sesh1.Token)
-	token2 := base64.StdEncoding.EncodeToString(sesh2.Token)
+	token1 := base64.RawURLEncoding.EncodeToString(sesh1.Token)
+	token2 := base64.RawURLEncoding.EncodeToString(sesh2.Token)
 
 	// Make two Publishers under bucket "notifs", and one under "brotifs".
 	var pub1, pub2 river.Pub
