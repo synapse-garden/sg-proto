@@ -60,14 +60,19 @@ func (ch chans) ReadSend(read SocketReader) {
 		}
 		if bs, ok, err := read(ch.Conn); errors.Cause(err) == io.EOF {
 			return
-		} else if err != nil {
+		} else if ok && err != nil {
+			// Error, but not a parse error.
 			log.Printf("failed to read from socket: %s", err.Error())
 			return
+		} else if !ok && err != nil {
+			// Content error.  Tell the frontend, then move on.
+			ch.errs <- errors.Errorf("malformed message: %s", err.Error())
 		} else if !ok {
-			// Formatting error.  Tell the
+			// Content error, but no specifics.  Tell the
 			// frontend, then move on.
 			ch.errs <- errors.Errorf("malformed message: %#q", bs)
 		} else if err = ch.Send(bs); err != nil {
+			// Not bad content, and no error.
 			log.Printf("failed to send to Sender: %s", err.Error())
 			return
 		}
