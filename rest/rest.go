@@ -3,6 +3,7 @@ package rest
 import (
 	"github.com/synapse-garden/sg-proto/admin"
 	"github.com/synapse-garden/sg-proto/auth"
+	"github.com/synapse-garden/sg-proto/convo"
 	"github.com/synapse-garden/sg-proto/incept"
 	"github.com/synapse-garden/sg-proto/store"
 	"github.com/synapse-garden/sg-proto/stream"
@@ -59,9 +60,12 @@ func Bind(
 		auth.ContextBucket,
 		stream.StreamBucket,
 		river.RiverBucket,
+		convo.ConvoBucket,
+		convo.MessageBucket,
 	)); err != nil {
 		return nil, err
 	}
+
 	htr := httprouter.New()
 	for _, api := range []API{
 		Source(source),
@@ -70,6 +74,7 @@ func Bind(
 		Token,
 		Profile,
 		Stream,
+		Convo,
 	} {
 		if err := api(htr, db); err != nil {
 			return nil, err
