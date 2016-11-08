@@ -1,11 +1,11 @@
 package stream
 
 func MakeMissingErr(id []byte) error {
-	return errStreamMissing(id)
+	return errMissing(id)
 }
 
 func MakeExistsErr(id []byte) error {
-	return errStreamExists(id)
+	return errExists(id)
 }
 
 func MakeUnauthorizedErr(user string) error {

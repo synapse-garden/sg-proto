@@ -2,15 +2,15 @@ package stream
 
 import "fmt"
 
-type errStreamMissing string
+type errMissing string
 
-func (e errStreamMissing) Error() string {
+func (e errMissing) Error() string {
 	return fmt.Sprintf("no such stream %#q", string(e))
 }
 
-type errStreamExists string
+type errExists string
 
-func (e errStreamExists) Error() string {
+func (e errExists) Error() string {
 	return fmt.Sprintf("stream %#q already exists", string(e))
 }
 
@@ -24,7 +24,7 @@ func IsMissing(err error) bool {
 	if err == nil {
 		return false
 	}
-	_, ok := err.(errStreamMissing)
+	_, ok := err.(errMissing)
 	return ok
 }
 
@@ -32,7 +32,7 @@ func IsExists(err error) bool {
 	if err == nil {
 		return false
 	}
-	_, ok := err.(errStreamExists)
+	_, ok := err.(errExists)
 	return ok
 }
 

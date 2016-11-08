@@ -91,19 +91,19 @@ func CheckNotExist(id string) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
 		err := store.CheckNotExist(StreamBucket, []byte(id))(tx)
 		if store.IsExists(err) {
-			return errStreamExists(id)
+			return errExists(id)
 		}
 		return err
 	}
 }
 
-// CheckNotExist returns a function which returns nil if the Stream with
-// the given ID does not exist.
+// CheckExists returns a function which returns nil if the Stream with
+// the given ID exists.
 func CheckExists(id string) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
 		err := store.CheckExists(StreamBucket, []byte(id))(tx)
 		if store.IsMissing(err) {
-			return errStreamMissing(id)
+			return errMissing(id)
 		}
 		return err
 	}
@@ -116,7 +116,7 @@ func Get(s *Stream, id string) func(*bolt.Tx) error {
 		err := store.Unmarshal(StreamBucket, s, []byte(id))(tx)
 		switch {
 		case store.IsMissing(err):
-			return errStreamMissing(id)
+			return errMissing(id)
 		case err != nil:
 			return err
 		}

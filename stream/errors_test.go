@@ -6,7 +6,7 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-func (s *StreamSuite) TestErrStreamMissing(c *C) {
+func (s *StreamSuite) TestErrMissing(c *C) {
 	var err error
 	c.Check(stream.IsMissing(err), Equals, false)
 	err = stream.MakeMissingErr([]byte("b"))
@@ -14,7 +14,7 @@ func (s *StreamSuite) TestErrStreamMissing(c *C) {
 	c.Check(stream.IsMissing(err), Equals, true)
 }
 
-func (s *StreamSuite) TestErrStreamExists(c *C) {
+func (s *StreamSuite) TestErrExists(c *C) {
 	var err error
 	c.Check(stream.IsExists(err), Equals, false)
 	err = stream.MakeExistsErr([]byte("b"))
