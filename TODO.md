@@ -35,6 +35,7 @@
 - [ ] Only one notification stream exists per user
 - [ ] Package user can specify how it works
 - [ ] Consider using a salted hash for stream topics
+- [ ] Consider globally buffering all streams
 
 # v0.2.0 ?
 
@@ -89,6 +90,11 @@
 
 - [ ] Organize TODOs
 
+- [ ] Tighten up convo message funcs
+- [ ] Make convo message blocks
+- [ ] Test convo message db funcs
+- [ ] Messages keyed by ID instead of date
+  - [ ] Migration for this?
 - [ ] Test notif hangups
 - [ ] Make a helper function to make hangups easier to use.
 - [ ] ws.HangupSender a horrible mess.  Do something better, for the
@@ -145,6 +151,7 @@
 - [x] river.Surveyor and river.Respondent require a slight pause between
       Dial and usage.  Data race found due to mangos Init!
 	  https://github.com/go-mangos/mangos/issues/236
+- [ ] Deleting the user's profile doesn't close his Streams.
 - [ ] Surveyor / Respondent don't keep track of who's still alive.  If a
       Responder removes itself from its bucket, the Survey will fail.
 - [ ] If a survey has a problem, responders are in an unknown state.
@@ -159,8 +166,8 @@
   - [ ] Bolt?
     - [ ] Configure cache settings?
 - [ ] Deleting the user's profile doesn't eliminate his owned objects.
-- [ ] Deleting the user's profile doesn't close his Streams.
 - [ ] Bad usernames cannot be looked up for expired Sessions
+- [ ] No way of cleaning up failed Scribes
 
 ## Admin API
 
@@ -175,6 +182,7 @@
 ## Code quality / package sanitation
 
 - [x] Split Streams and Rivers
+- [ ] Tighten up Convo REST API, add defered cleanups
 - [ ] Update README.md and CONTRIBUTING.md
 - [ ] Comment all exported functions, types, methods, and constants
 - [ ] Make sure not just anyone can get a refresh token
@@ -219,6 +227,7 @@
 - [x] Users can GET /streams they belong to, not just Streams they own
 - [x] SSL "wss" works correctly
 - [x] Multiple Bus Rivers per Stream per User
+- [ ] Removing a user from a Stream hangs up the user's Stream bindings
 - [ ] Close running stream from API (use Survey/Resp)
 - [ ] Use https://golang.org/pkg/net/http/httptrace/ for REST test
 - [ ] Inactive Rivers eventually time out
@@ -249,16 +258,39 @@
 
 ## Chat
 
+- [x] Convos are Streams with a REST interface
+- [ ] Removing a user from a convo hangs up their convos
+- [x] Everything is identical to Bus rivers but:
+  - [x] convos have their own bucket
+  - [x] the SocketReader wraps messages with username and timestamp
+  - [x] a Scribe connection for the convo is requested by the first to
+        join the convo, and deleted by the last to leave
+	- [ ] Future: Scribe is a single Sub Recver which is created on init
+	      and cannot be hung up, senders double-post to it
+	- [x] Present: Scribe is an orphan Bus Recver which doesn't send, is
+	      created if not present by first person to join convo, and is
+		  hung up by last person to leave
+  - [ ] Convo connections time out when inactive for a while (15 min?)
+
+- [ ] GET /convos/<id>/messages?start/end/etc
+  - [ ] More filters
+
+- [x] Chat between two or more users (on top of streams API)
+- [x] Chat messages stored
+- [x] Chat messages queryable (backward?) by timestamp and paginated
+- [x] User sends {"content":"string"} which gets bound with username
+- [x] Unregister reader on close
+
+- [ ] Filters on GET
+  - [ ] Sender
+  - [ ] Date
+  - [ ] Max
+  - [ ] Paginate
+  - [ ] Filter by max messages
+    - [x] Default to last 50
 - [ ] Notify when user opens a chat to users
-- [ ] Chat between two users (on top of streams API)
-- [ ] Chat messages stored
-- [ ] Chat messages queryable (backward?) by timestamp and paginated
-- [ ] User sends only text
 - [ ] User notified when they are added or removed
-- [ ] Scrollback?
-- [ ] Unregister reader on close
 - [ ] Handle errors sanely
-- [ ] Consider globally buffering all streams
 - [ ] Test what happens when one or more users hang up, etc
 
 ## Todo
