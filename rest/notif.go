@@ -19,7 +19,7 @@ import (
 // Notif is a websocket API endpoint for authenticated users.
 func Notif(r *htr.Router, db *bolt.DB) error {
 	// When a client wants to connect to notifs, use stream.NewSub.
-	r.GET("/notifs", mw.AuthUser(ConnectNotifs(db), db, mw.CtxSetUserID))
+	r.GET("/notifs", mw.AuthWSUser(ConnectNotifs(db), db, mw.CtxSetUserID))
 	return nil
 }
 

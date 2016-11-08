@@ -59,7 +59,7 @@ func Stream(r *htr.Router, db *bolt.DB) error {
 	//   - Just slices of {username, timestamp, message}
 	//   - DELETE a stream I own
 
-	r.GET("/streams/:stream_id/start", mw.AuthUser(
+	r.GET("/streams/:stream_id/start", mw.AuthWSUser(
 		ConnectStream(db),
 		db, mw.CtxSetUserID,
 	))
