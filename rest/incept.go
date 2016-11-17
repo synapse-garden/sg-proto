@@ -15,60 +15,68 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-func Incept(r *httprouter.Router, db *bolt.DB) error {
-	r.POST("/incept/:key", InceptHandle(db))
+// Incept implements API on a database.  It handles new user creation.
+type Incept struct {
+	*bolt.DB
+}
+
+// Bind implements API.Bind on Incept.
+func (i Incept) Bind(r *httprouter.Router) error {
+	if i.DB == nil {
+		return errors.New("Incept DB handle must not be nil")
+	}
+	r.POST("/incept/:key", i.Incept)
 	return nil
 }
 
-func InceptHandle(db *bolt.DB) httprouter.Handle {
-	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		l := new(auth.Login)
-		if err := json.NewDecoder(r.Body).Decode(l); err != nil {
-			http.Error(w, fmt.Sprintf(
-				"failed to decode: %s",
-				err.Error(),
-			), http.StatusBadRequest)
-			return
-		}
+func (i Incept) Incept(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	db := i.DB
+	l := new(auth.Login)
+	if err := json.NewDecoder(r.Body).Decode(l); err != nil {
+		http.Error(w, fmt.Sprintf(
+			"failed to decode: %s",
+			err.Error(),
+		), http.StatusBadRequest)
+		return
+	}
 
-		if err := auth.ValidateNew(l); err != nil {
-			http.Error(w, fmt.Sprintf(
-				"invalid login: %s",
-				err.Error(),
-			), http.StatusBadRequest)
-			return
-		}
+	if err := auth.ValidateNew(l); err != nil {
+		http.Error(w, fmt.Sprintf(
+			"invalid login: %s",
+			err.Error(),
+		), http.StatusBadRequest)
+		return
+	}
 
-		key := ps.ByName("key")
-		tkt, err := uuid.FromString(key)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
+	key := ps.ByName("key")
+	tkt, err := uuid.FromString(key)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
-		err = incept.Incept(incept.Ticket(tkt), l, db)
-		if err != nil {
-			var status int
-			switch err.(type) {
-			case incept.ErrTicketMissing:
-				status = http.StatusNotFound
-			case users.ErrExists:
-				status = http.StatusConflict
-			case auth.ErrExists:
-				status = http.StatusConflict
-			default:
-				status = http.StatusInternalServerError
-			}
-			http.Error(w, err.Error(), status)
-			return
+	err = incept.Incept(incept.Ticket(tkt), l, db)
+	if err != nil {
+		var status int
+		switch err.(type) {
+		case incept.ErrTicketMissing:
+			status = http.StatusNotFound
+		case users.ErrExists:
+			status = http.StatusConflict
+		case auth.ErrExists:
+			status = http.StatusConflict
+		default:
+			status = http.StatusInternalServerError
 		}
+		http.Error(w, err.Error(), status)
+		return
+	}
 
-		err = json.NewEncoder(w).Encode(l.User)
-		if err != nil {
-			http.Error(w, errors.Wrap(
-				err, "failed to marshal User").Error(),
-				http.StatusInternalServerError)
-			return
-		}
+	err = json.NewEncoder(w).Encode(l.User)
+	if err != nil {
+		http.Error(w, errors.Wrap(
+			err, "failed to marshal User").Error(),
+			http.StatusInternalServerError)
+		return
 	}
 }

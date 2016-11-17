@@ -45,7 +45,7 @@ func main() {
 		log.Fatalf("unable to open Bolt database: %s", err.Error())
 	}
 
-	source := &rest.SourceInfo{
+	source := rest.SourceInfo{
 		Location:   *SourceLocation,
 		License:    SourceLicense,
 		LicensedTo: Licensee,

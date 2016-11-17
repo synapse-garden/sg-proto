@@ -144,7 +144,7 @@ func (s *RESTSuite) TestIncept(c *C) {
 		c.Logf("  Body: %#q", test.body)
 
 		r := httprouter.New()
-		rest.Incept(r, s.db)
+		c.Assert(rest.Incept{DB: s.db}.Bind(r), IsNil)
 		rdr := bytes.NewBufferString(test.body)
 		req := htt.NewRequest(test.method, test.url, rdr)
 		w := htt.NewRecorder()

@@ -42,12 +42,14 @@ import (
 
 // API is a transform on an httprouter.Router, passing a DB for passing
 // on to httprouter.Handles.
-type API func(*httprouter.Router, *bolt.DB) error
+type API interface {
+	Bind(*httprouter.Router) error
+}
 
 // Bind binds the API on the given DB.  It sets up REST endpoints as needed.
 func Bind(
 	db *bolt.DB,
-	source *SourceInfo,
+	source SourceInfo,
 	apiKey auth.Token,
 ) (*httprouter.Router, error) {
 	if err := db.Update(store.Prep(
@@ -68,15 +70,16 @@ func Bind(
 
 	htr := httprouter.New()
 	for _, api := range []API{
-		Source(source),
-		Admin(apiKey),
-		Incept,
-		Token,
-		Profile,
-		Stream,
-		Convo,
+		source,
+		Admin{Token: apiKey, DB: db},
+		Incept{DB: db},
+		Token{DB: db},
+		Profile{DB: db},
+		Notif{DB: db},
+		Stream{DB: db},
+		Convo{DB: db},
 	} {
-		if err := api(htr, db); err != nil {
+		if err := api.Bind(htr); err != nil {
 			return nil, err
 		}
 	}

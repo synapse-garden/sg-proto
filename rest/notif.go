@@ -16,88 +16,96 @@ import (
 	xws "golang.org/x/net/websocket"
 )
 
-// Notif is a websocket API endpoint for authenticated users.
-func Notif(r *htr.Router, db *bolt.DB) error {
+// Notif is a websocket API endpoint for connecting a websocket to
+// notifications.
+type Notif struct {
+	*bolt.DB
+}
+
+// Bind implements API.Bind on Notif.
+func (n Notif) Bind(r *htr.Router) error {
+	if n.DB == nil {
+		return errors.New("Notif DB handle must not be nil")
+	}
 	// When a client wants to connect to notifs, use stream.NewSub.
-	r.GET("/notifs", mw.AuthWSUser(ConnectNotifs(db), db, mw.CtxSetUserID))
+	r.GET("/notifs", mw.AuthWSUser(n.Connect, n.DB, mw.CtxSetUserID))
 	return nil
 }
 
-// ConnectNotifs binds a subscriber River and serves it over a Websocket.
-func ConnectNotifs(db *bolt.DB) htr.Handle {
-	return func(w http.ResponseWriter, r *http.Request, _ htr.Params) {
-		userID := mw.CtxGetUserID(r)
+// Connect binds a subscriber River and serves it over a Websocket.
+func (n Notif) Connect(w http.ResponseWriter, r *http.Request, _ htr.Params) {
+	userID := mw.CtxGetUserID(r)
+	db := n.DB
 
-		// Create a new river.Responder to respond to hangup
-		// requests from the backend.
-		var rsp river.Responder
-		err := db.Update(func(tx *bolt.Tx) (e error) {
-			rsp, e = river.NewResponder(tx,
-				river.HangupBucket,
-				river.ResponderBucket,
-				store.Bucket(userID),
-			)
-			return
-		})
-		if err != nil {
-			http.Error(w, errors.Wrap(
-				err, "failed to start new River",
-			).Error(), http.StatusInternalServerError)
-			return
-		}
+	// Create a new river.Responder to respond to hangup
+	// requests from the backend.
+	var rsp river.Responder
+	err := db.Update(func(tx *bolt.Tx) (e error) {
+		rsp, e = river.NewResponder(tx,
+			river.HangupBucket,
+			river.ResponderBucket,
+			store.Bucket(userID),
+		)
+		return
+	})
+	if err != nil {
+		http.Error(w, errors.Wrap(
+			err, "failed to start new River",
+		).Error(), http.StatusInternalServerError)
+		return
+	}
 
-		var read river.Sub
-		err = db.Update(func(tx *bolt.Tx) (e error) {
-			read, e = river.NewSub(
-				notif.River,
-				tx,
-				notif.Topics(userID)...,
-			)
-			return
-		})
+	var read river.Sub
+	err = db.Update(func(tx *bolt.Tx) (e error) {
+		read, e = river.NewSub(
+			notif.River,
+			tx,
+			notif.Topics(userID)...,
+		)
+		return
+	})
 
-		switch {
-		case river.IsStreamMissing(err):
-			http.Error(w, errors.Wrap(err,
-				"subscription server not found",
-			).Error(), http.StatusNotFound)
-			return
-		case err != nil:
-			log.Printf("ERROR: unexpected river error: %s", err.Error())
-			http.Error(w, errors.Wrap(err,
-				"unexpected river error",
-			).Error(), http.StatusInternalServerError)
-			return
-		}
+	switch {
+	case river.IsStreamMissing(err):
+		http.Error(w, errors.Wrap(err,
+			"subscription server not found",
+		).Error(), http.StatusNotFound)
+		return
+	case err != nil:
+		log.Printf("ERROR: unexpected river error: %s", err.Error())
+		http.Error(w, errors.Wrap(err,
+			"unexpected river error",
+		).Error(), http.StatusInternalServerError)
+		return
+	}
 
-		h := ws.MakeHangupRecver(rsp, read)
-		errCh := make(chan error)
-		go func() {
-			// Start a survey waiting for hangup.
-			errCh <- river.AwaitHangup(h)
-		}()
+	h := ws.MakeHangupRecver(rsp, read)
+	errCh := make(chan error)
+	go func() {
+		// Start a survey waiting for hangup.
+		errCh <- river.AwaitHangup(h)
+	}()
 
-		xws.Server{
-			Handshake: ws.Check,
-			Handler:   ws.BindRead(h.Recver()),
-		}.ServeHTTP(w, r)
+	xws.Server{
+		Handshake: ws.Check,
+		Handler:   ws.BindRead(h.Recver()),
+	}.ServeHTTP(w, r)
 
-		err = db.Update(func(tx *bolt.Tx) error {
-			read.Close()
-			rsp.Close()
-			<-errCh
+	err = db.Update(func(tx *bolt.Tx) error {
+		read.Close()
+		rsp.Close()
+		<-errCh
 
-			return river.DeleteResp(tx, h.ID(),
-				river.HangupBucket,
-				river.ResponderBucket,
-				store.Bucket(userID),
-			)
-		})
-		if err != nil {
-			http.Error(w, errors.Wrap(
-				err, "failed to clean up notif River",
-			).Error(), http.StatusInternalServerError)
-			return
-		}
+		return river.DeleteResp(tx, h.ID(),
+			river.HangupBucket,
+			river.ResponderBucket,
+			store.Bucket(userID),
+		)
+	})
+	if err != nil {
+		http.Error(w, errors.Wrap(
+			err, "failed to clean up notif River",
+		).Error(), http.StatusInternalServerError)
+		return
 	}
 }

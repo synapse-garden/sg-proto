@@ -43,7 +43,7 @@ func (s *RESTSuite) TestStream(c *C) {
 	token2 := base64.RawURLEncoding.EncodeToString(sesh2.Token)
 
 	r := httprouter.New()
-	c.Assert(rest.Stream(r, s.db), IsNil)
+	c.Assert(rest.Stream{DB: s.db}.Bind(r), IsNil)
 	// Make a testing server to run it.
 	srv := htt.NewServer(r)
 	defer srv.Close()

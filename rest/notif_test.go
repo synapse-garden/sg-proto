@@ -20,7 +20,7 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-var _ = rest.API(rest.Notif)
+var _ = rest.API(rest.Notif{})
 
 type fooResourcer struct{ X int }
 
@@ -69,7 +69,7 @@ func (s *RESTSuite) TestConnectNotifs(c *C) {
 	}), IsNil)
 
 	r := httprouter.New()
-	c.Assert(rest.Notif(r, s.db), IsNil)
+	c.Assert(rest.Notif{DB: s.db}.Bind(r), IsNil)
 	// Make a testing server to run it.
 	srv := httptest.NewServer(r)
 	defer srv.Close()

@@ -14,7 +14,7 @@ func serveInsecure(
 	db *bolt.DB,
 	apiKey auth.Token,
 	addr, port string,
-	source *rest.SourceInfo,
+	source rest.SourceInfo,
 ) {
 	router, err := rest.Bind(db, source, apiKey)
 	if err != nil {
@@ -29,7 +29,7 @@ func serveSecure(
 	db *bolt.DB,
 	apiKey auth.Token,
 	addr, port, cert, key string,
-	source *rest.SourceInfo,
+	source rest.SourceInfo,
 ) {
 	router, err := rest.Bind(db, source, apiKey)
 	if err != nil {
@@ -48,7 +48,7 @@ func devServeInsecure(
 	db *bolt.DB,
 	apiKey auth.Token,
 	addr, port string,
-	source *rest.SourceInfo,
+	source rest.SourceInfo,
 ) {
 	router, err := rest.Bind(db, source, apiKey)
 	if err != nil {
@@ -64,7 +64,7 @@ func devServeSecure(
 	db *bolt.DB,
 	apiKey auth.Token,
 	addr, port, cert, key string,
-	source *rest.SourceInfo,
+	source rest.SourceInfo,
 ) {
 	router, err := rest.Bind(db, source, apiKey)
 	if err != nil {
