@@ -582,5 +582,11 @@ func (c Convo) Delete(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		return
 	}
 
-	return
+	if err := c.Update(convo.Delete([]byte(id))); err != nil {
+		http.Error(w, fmt.Sprintf(
+			"failed to delete convo %#q: %s",
+			id, err.Error(),
+		), http.StatusInternalServerError)
+		return
+	}
 }
