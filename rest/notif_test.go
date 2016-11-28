@@ -76,8 +76,10 @@ func (s *RESTSuite) TestConnectNotifs(c *C) {
 
 	// Get a new ws connection for each user.  Topic is set to
 	// notif.UserTopic based on token => username lookup.
-	conn1 := getWSClient(c, token1, srv.URL+"/notifs")
-	conn2 := getWSClient(c, token2, srv.URL+"/notifs")
+	conn1, err := sgt.GetWSClient(token1, srv.URL+"/notifs")
+	c.Assert(err, IsNil)
+	conn2, err := sgt.GetWSClient(token2, srv.URL+"/notifs")
+	c.Assert(err, IsNil)
 
 	// Messages published on pub1 / pub2 are received for each user
 	// correctly, but pub3 messages are not received since it wasn't

@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"io/ioutil"
 	htt "net/http/httptest"
-	"net/url"
 
 	"github.com/synapse-garden/sg-proto/auth"
 	"github.com/synapse-garden/sg-proto/incept"
@@ -61,9 +60,12 @@ func (s *RESTSuite) TestStream(c *C) {
 	c.Assert(s.db.Update(stream.Upsert(str)), IsNil)
 
 	// Get a new ws connection for each user.
-	conn1 := getWSClient(c, token1, srv.URL+"/streams/"+str.ID+"/start")
-	conn1b := getWSClient(c, token1, srv.URL+"/streams/"+str.ID+"/start")
-	conn2 := getWSClient(c, token2, srv.URL+"/streams/"+str.ID+"/start")
+	conn1, err := sgt.GetWSClient(token1, srv.URL+"/streams/"+str.ID+"/start")
+	c.Assert(err, IsNil)
+	conn1b, err := sgt.GetWSClient(token1, srv.URL+"/streams/"+str.ID+"/start")
+	c.Assert(err, IsNil)
+	conn2, err := sgt.GetWSClient(token2, srv.URL+"/streams/"+str.ID+"/start")
+	c.Assert(err, IsNil)
 
 	// Any sent message should be echoed to all receivers.
 	c.Assert(ws.JSON.Send(conn1, &stream.Message{Content: "hello1"}), IsNil)
@@ -114,20 +116,4 @@ func (s *RESTSuite) TestStream(c *C) {
 	bs, err := ioutil.ReadAll(conn2)
 	c.Check(string(bs), Equals, "stream hung up: EOF")
 	c.Check(err, IsNil) // Note that nil = io.EOF in io.ReadAll.
-}
-
-func getWSClient(c *C, token, urlStr string) *ws.Conn {
-	urlLoc, err := url.Parse(urlStr)
-	c.Assert(err, IsNil)
-	urlLoc.Scheme = "ws"
-
-	conn, err := ws.DialConfig(&ws.Config{
-		Location: urlLoc,
-		Origin:   &url.URL{},
-		Version:  ws.ProtocolVersionHybi13,
-		Protocol: []string{"Bearer+" + token},
-	})
-	c.Assert(err, IsNil)
-
-	return conn
 }
