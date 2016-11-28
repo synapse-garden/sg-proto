@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"encoding/json"
 	"io"
 	"log"
 
@@ -8,6 +9,16 @@ import (
 
 	xws "golang.org/x/net/websocket"
 )
+
+// MessageError is a JSON-serializable error message.
+type MessageError struct{ Error error }
+
+// MarshalJSON implements JSON.Marshaler on MessageError.
+func (m MessageError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Error string `json:"error"`
+	}{m.Error.Error()})
+}
 
 // chans is a simple struct for binding a set of done, errors, and fail
 // channels from a typical websocket bind to simplify the ws.Bind func.
@@ -25,8 +36,10 @@ func (ch chans) WriteErrors() {
 	for {
 		select {
 		case err := <-ch.errs:
-			_, err = ch.Write([]byte(err.Error()))
+			bytes, err := json.Marshal(MessageError{err})
 			if err != nil {
+				log.Fatalf("failed to marshal MessageError: %#v", err)
+			} else if _, err = ch.Write(bytes); err != nil {
 				log.Printf("failed to write websocket "+
 					"error to reader: %s",
 					err.Error())
