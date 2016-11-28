@@ -19,6 +19,25 @@ type chans struct {
 	done, fail chan struct{}
 }
 
+// WriteErrors receives errors from the chans error channel, and writes
+// them to the Websocket.
+func (ch chans) WriteErrors() {
+	for {
+		select {
+		case err := <-ch.errs:
+			_, err = ch.Write([]byte(err.Error()))
+			if err != nil {
+				log.Printf("failed to write websocket "+
+					"error to reader: %s",
+					err.Error())
+				return
+			}
+		case <-ch.done:
+			return
+		}
+	}
+}
+
 // RecvWrite receives messages from the SendRecver and writes them to
 // the Conn.  If an error is received from errs, it will write it to the
 // Conn using err.Error().  When done is closed, it will return.  Any
@@ -27,17 +46,6 @@ func (ch chans) RecvWrite() {
 	defer close(ch.fail)
 	// Receive from sr; pass result to c Write.
 	for {
-		select {
-		case err := <-ch.errs:
-			_, err = ch.Write([]byte(err.Error()))
-			if err != nil {
-				return
-			}
-		case <-ch.done:
-			return
-		default:
-		}
-
 		if bs, err := ch.Recv(); err != nil {
 			return
 		} else if _, err = ch.Write(bs); err != nil {
@@ -66,13 +74,14 @@ func (ch chans) ReadSend(read SocketReader) {
 			return
 		} else if !ok && err != nil {
 			// Content error.  Tell the frontend, then move on.
-			ch.errs <- errors.Errorf("malformed message: %s", err.Error())
+			ch.errs <- errors.Wrap(err, "malformed message")
 		} else if !ok {
 			// Content error, but no specifics.  Tell the
 			// frontend, then move on.
 			ch.errs <- errors.Errorf("malformed message: %#q", bs)
 		} else if err = ch.Send(bs); err != nil {
-			// Not bad content, and no error.
+			// Not bad content, and no parse error, but
+			// failed to send.
 			log.Printf("failed to send to Sender: %s", err.Error())
 			return
 		}

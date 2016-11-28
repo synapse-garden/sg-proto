@@ -84,6 +84,7 @@ func Bind(sr SendRecver, read SocketReader) xws.Handler {
 			fail: make(chan struct{}),
 		}
 
+		go ch.WriteErrors()
 		go ch.RecvWrite()
 		go ch.ReadSend(read)
 
