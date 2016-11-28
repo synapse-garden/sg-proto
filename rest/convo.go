@@ -12,6 +12,7 @@ import (
 	"github.com/synapse-garden/sg-proto/store"
 	"github.com/synapse-garden/sg-proto/stream/river"
 	"github.com/synapse-garden/sg-proto/users"
+	"github.com/synapse-garden/sg-proto/util"
 
 	"github.com/boltdb/bolt"
 	htr "github.com/julienschmidt/httprouter"
@@ -131,7 +132,10 @@ func (c Convo) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		return
 	}
 
-	h := ws.MakeHangup(rsp, convo.Sender(userID).Read)
+	h := ws.MakeHangup(rsp, convo.Sender{
+		Timer: util.SimpleTimer{},
+		Name:  userID,
+	}.Read)
 	errCh := make(chan error)
 	go func() {
 		// Start a survey waiting for hangup.

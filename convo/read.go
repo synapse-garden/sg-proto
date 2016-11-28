@@ -2,11 +2,11 @@ package convo
 
 import (
 	"encoding/json"
-	"time"
+
+	"github.com/synapse-garden/sg-proto/stream"
+	"github.com/synapse-garden/sg-proto/util"
 
 	"github.com/pkg/errors"
-	"github.com/synapse-garden/sg-proto/stream"
-
 	ws "golang.org/x/net/websocket"
 )
 
@@ -14,12 +14,18 @@ const ConvoMessage int = 1
 
 // Sender is a User who reads stream.Messages from a websocket Conn and
 // binds their contents into a new convo.Message with the attached user.
-type Sender string
+type Sender struct {
+	util.Timer
+	Name string
+}
 
 // Read is a SocketReader for passing to ws.Bind which wraps a received
 // stream.Message contents with the Sender's userID in a convo.Message,
-// and marshals the convo.Message into bytes.  Any syntax error will
-// result in a nil
+// and marshals the convo.Message into bytes.
+//
+// A false bool return value indicates a normal or non-fatal error, such
+// as a syntax error, so that the caller will know to notify the sender
+// and continue to the next Read.
 func (s Sender) Read(conn *ws.Conn) ([]byte, bool, error) {
 	msg := new(stream.Message)
 	if err := ws.JSON.Receive(conn, msg); err != nil {
@@ -43,8 +49,8 @@ func (s Sender) Read(conn *ws.Conn) ([]byte, bool, error) {
 
 	bs, err := json.Marshal(&Message{
 		Content:   msg.Content,
-		Sender:    string(s),
-		Timestamp: time.Now(),
+		Sender:    s.Name,
+		Timestamp: s.Now(),
 	})
 
 	if err != nil {
