@@ -151,6 +151,7 @@
 - [x] river.Surveyor and river.Respondent require a slight pause between
       Dial and usage.  Data race found due to mangos Init!
 	  https://github.com/go-mangos/mangos/issues/236
+- [x] Convo message parse errors are NOT sent to the websocket!
 - [ ] Deleting the user's profile doesn't close his Streams.
 - [ ] Surveyor / Respondent don't keep track of who's still alive.  If a
       Responder removes itself from its bucket, the Survey will fail.
@@ -279,6 +280,7 @@
 - [x] Chat messages stored
 - [x] Chat messages queryable (backward?) by timestamp and paginated
 - [x] User sends {"content":"string"} which gets bound with username
+- [x] On malformed client message, error message is written to websocket
 - [x] Unregister reader on close
 
 - [ ] Filters on GET
