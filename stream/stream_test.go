@@ -11,6 +11,9 @@ import (
 var (
 	_ = stream.Filter(stream.ByOwner(""))
 	_ = stream.Filter(stream.ByReader(""))
+
+	_ = store.Resourcer(stream.Stream{})
+	_ = store.Resourcer(&stream.Stream{})
 )
 
 func checkStreamMatch(

@@ -85,6 +85,9 @@ type Stream struct {
 	Writers map[string]bool `json:"writers,omitempty"`
 }
 
+// Resource implements store.Resourcer on Stream.
+func (Stream) Resource() store.Resource { return "streams" }
+
 // CheckNotExist returns a function which returns nil if the Stream with
 // the given ID does not exist.
 func CheckNotExist(id string) func(*bolt.Tx) error {
