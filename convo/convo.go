@@ -20,6 +20,9 @@ var (
 // controlling access and ownership of a websocket based connection.
 type Convo stream.Stream
 
+// Resource implements Resourcer.Resource on Convo.
+func (Convo) Resource() store.Resource { return "convos" }
+
 // CheckNotExist returns a function which returns nil if the Convo with
 // the given ID does not exist.
 func CheckNotExist(id string) func(*bolt.Tx) error {
