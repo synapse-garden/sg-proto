@@ -16,8 +16,12 @@ import (
 	xws "golang.org/x/net/websocket"
 )
 
-// Notif is a websocket API endpoint for connecting a websocket to
-// notifications.
+// NotifStream is the streamID to be used for notifs.
+const NotifStream = "notifs"
+
+// Notif implements API.  It handles websocket connections to API
+// endpoint notification publishers.  A user will receive events on the
+// websocket when an API publishes a notification event to its Pub.
 type Notif struct {
 	*bolt.DB
 }
@@ -35,12 +39,11 @@ func (n Notif) Bind(r *htr.Router) error {
 // Connect binds a subscriber River and serves it over a Websocket.
 func (n Notif) Connect(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 	userID := mw.CtxGetUserID(r)
-	db := n.DB
 
 	// Create a new river.Responder to respond to hangup
 	// requests from the backend.
 	var rsp river.Responder
-	err := db.Update(func(tx *bolt.Tx) (e error) {
+	err := n.Update(func(tx *bolt.Tx) (e error) {
 		rsp, e = river.NewResponder(tx,
 			river.HangupBucket,
 			river.ResponderBucket,
@@ -56,7 +59,7 @@ func (n Notif) Connect(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 	}
 
 	var read river.Sub
-	err = db.Update(func(tx *bolt.Tx) (e error) {
+	err = n.Update(func(tx *bolt.Tx) (e error) {
 		read, e = river.NewSub(
 			notif.River,
 			tx,
@@ -91,7 +94,7 @@ func (n Notif) Connect(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 		Handler:   ws.BindRead(h.Recver()),
 	}.ServeHTTP(w, r)
 
-	err = db.Update(func(tx *bolt.Tx) error {
+	err = n.Update(func(tx *bolt.Tx) error {
 		read.Close()
 		rsp.Close()
 		<-errCh

@@ -36,10 +36,9 @@ func (p Profile) Bind(r *htr.Router) error {
 }
 
 func (p Profile) Get(w http.ResponseWriter, r *http.Request, _ htr.Params) {
-	db := p.DB
 	userID := mw.CtxGetUserID(r)
 	user := new(users.User)
-	err := db.View(store.Unmarshal(users.UserBucket, user, []byte(userID)))
+	err := p.View(store.Unmarshal(users.UserBucket, user, []byte(userID)))
 	if err != nil {
 		switch err.(type) {
 		case users.ErrMissing:
@@ -58,12 +57,11 @@ func (p Profile) Get(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 }
 
 func (p Profile) Delete(w http.ResponseWriter, r *http.Request, _ htr.Params) {
-	db := p.DB
 	userID := mw.CtxGetUserID(r)
 	token := mw.CtxGetToken(r)
 	refreshToken := mw.CtxGetRefreshToken(r)
 
-	err := db.Update(store.Wrap(
+	err := p.Update(store.Wrap(
 		users.Delete(&users.User{Name: userID}),
 		auth.Delete(&auth.Login{
 			User: users.User{Name: userID},

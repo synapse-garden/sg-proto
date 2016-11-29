@@ -30,7 +30,6 @@ func (i Incept) Bind(r *httprouter.Router) error {
 }
 
 func (i Incept) Incept(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	db := i.DB
 	l := new(auth.Login)
 	if err := json.NewDecoder(r.Body).Decode(l); err != nil {
 		http.Error(w, fmt.Sprintf(
@@ -55,7 +54,7 @@ func (i Incept) Incept(w http.ResponseWriter, r *http.Request, ps httprouter.Par
 		return
 	}
 
-	err = incept.Incept(incept.Ticket(tkt), l, db)
+	err = incept.Incept(incept.Ticket(tkt), l, i.DB)
 	if err != nil {
 		var status int
 		switch err.(type) {

@@ -90,7 +90,7 @@ func (s Stream) Bind(r *htr.Router) error {
 	))
 
 	r.PUT("/streams/:stream_id", mw.AuthUser(
-		s.Update,
+		s.Put,
 		db, mw.CtxSetUserID,
 	))
 
@@ -102,10 +102,9 @@ func (s Stream) Bind(r *htr.Router) error {
 	return nil
 }
 
-// Connect returns a Handle which opens and binds a WebSocket session to
-// a Stream.  The messages are transported as-is.
+// Connect is a Handle which opens and binds a WebSocket session to a
+// Stream.  The messages are transported as-is.
 func (s Stream) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
-	db := s.DB
 	userID := mw.CtxGetUserID(r)
 	id := ps.ByName("stream_id")
 	if _, err := uuid.FromString(id); err != nil {
@@ -116,7 +115,7 @@ func (s Stream) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	}
 
 	str := new(stream.Stream)
-	err := db.View(stream.Get(str, id))
+	err := s.View(stream.Get(str, id))
 	switch {
 	case stream.IsMissing(err):
 		http.Error(w, err.Error(), http.StatusNotFound)
@@ -138,7 +137,7 @@ func (s Stream) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	// Create a new river.Responder to respond to hangup requests
 	// from the backend.
 	var rsp river.Responder
-	err = db.Update(func(tx *bolt.Tx) (e error) {
+	err = s.Update(func(tx *bolt.Tx) (e error) {
 		rsp, e = river.NewResponder(tx,
 			river.HangupBucket,
 			store.Bucket(str.ID),
@@ -167,7 +166,7 @@ func (s Stream) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	}()
 
 	var rv river.Bus
-	err = db.Update(func(tx *bolt.Tx) (e error) {
+	err = s.Update(func(tx *bolt.Tx) (e error) {
 		rv, e = river.NewBus(userID, str.ID, tx)
 		return
 	})
@@ -192,7 +191,7 @@ func (s Stream) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		Handler: ws.Bind(rv, h.Read),
 	}.ServeHTTP(w, r)
 
-	err = db.Update(func(tx *bolt.Tx) (e error) {
+	err = s.Update(func(tx *bolt.Tx) (e error) {
 		eD := river.DeleteBus(userID, str.ID, rv.ID())(tx)
 		eC := rv.Close()
 		switch {
@@ -230,12 +229,19 @@ func (s Stream) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 			err, "failed to clean up River %#q", id,
 		).Error())
 	}
+
+	// Notify stream members that the user has left.
+	for u := range str.Readers {
+		err = notif.Encode(s.Pub, str, notif.MakeUserTopic(u))
+		if err != nil {
+			log.Printf("failed to notify user %q of stream leave", u)
+		}
+	}
 }
 
-// Create returns a Handle over the DB which checks that the POSTed
-// Stream is valid and then creates it, returning the created Stream.
+// Create is a Handle over the DB which checks that the POSTed Stream is
+// valid and then creates it, returning the created Stream.
 func (s Stream) Create(w http.ResponseWriter, r *http.Request, _ htr.Params) {
-	db := s.DB
 	str := new(stream.Stream)
 	if err := json.NewDecoder(r.Body).Decode(str); err != nil {
 		http.Error(w, errors.Wrap(
@@ -262,7 +268,7 @@ func (s Stream) Create(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 		next++
 	}
 
-	err := db.View(store.Wrap(
+	err := s.View(store.Wrap(
 		stream.CheckNotExist(id),
 		users.CheckUsersExist(allUsers...),
 	))
@@ -281,7 +287,7 @@ func (s Stream) Create(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 		return
 	}
 
-	err = db.Update(store.Wrap(
+	err = s.Update(store.Wrap(
 		stream.CheckNotExist(id),
 		users.CheckUsersExist(allUsers...),
 		stream.Upsert(str),
@@ -309,9 +315,8 @@ func (s Stream) Create(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 	}
 }
 
-// Update returns a Handle which updates a Stream in the DB by ID.
-func (s Stream) Update(w http.ResponseWriter, r *http.Request, ps htr.Params) {
-	db := s.DB
+// Put is a Handle which updates a Stream in the DB by ID.
+func (s Stream) Put(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	userID := mw.CtxGetUserID(r)
 	id := ps.ByName("stream_id")
 	if _, err := uuid.FromString(id); err != nil {
@@ -343,7 +348,7 @@ func (s Stream) Update(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		next++
 	}
 
-	err := db.View(store.Wrap(
+	err := s.View(store.Wrap(
 		stream.CheckExists(id),
 		users.CheckUsersExist(allUsers...),
 	))
@@ -363,7 +368,7 @@ func (s Stream) Update(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	}
 
 	existing := new(stream.Stream)
-	if err := db.View(stream.Get(existing, id)); stream.IsMissing(err) {
+	if err := s.View(stream.Get(existing, id)); stream.IsMissing(err) {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	} else if err != nil {
@@ -374,7 +379,7 @@ func (s Stream) Update(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	}
 
 	// TODO: FIXME: Hang up removed read / write users
-	err = db.Update(store.Wrap(
+	err = s.Update(store.Wrap(
 		stream.CheckExists(id),
 		users.CheckUsersExist(allUsers...),
 		stream.Upsert(str),
@@ -402,19 +407,17 @@ func (s Stream) Update(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	}
 }
 
-// GetAll returns a Handle which writes all Streams owned by the user to
-// the ResponseWriter.
+// GetAll is a Handle which writes all Streams owned by the user to the
+// ResponseWriter.
 //
 // TODO: Make Filters more flexible so users who aren't Owners can also
 //       get Streams they belong to.
 func (s Stream) GetAll(w http.ResponseWriter, r *http.Request, _ htr.Params) {
-	db := s.DB
-
 	// TODO: add search parameters
 	// TODO: add pagination
 	userID := mw.CtxGetUserID(r)
 	var allStreams []*stream.Stream
-	err := db.View(func(tx *bolt.Tx) (e error) {
+	err := s.View(func(tx *bolt.Tx) (e error) {
 		allStreams, e = stream.GetAll(userID)(tx)
 		return
 	})
@@ -433,11 +436,9 @@ func (s Stream) GetAll(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 	}
 }
 
-// Get returns a Handle which gets the given Stream by ID.  Any user who
-// is an Owner, Reader, or Writer can get a Stream by ID.
+// Get is a Handle which gets the given Stream by ID.  Any user who is
+// an Owner, Reader, or Writer can get a Stream by ID.
 func (s Stream) Get(w http.ResponseWriter, r *http.Request, ps htr.Params) {
-	db := s.DB
-
 	userID := mw.CtxGetUserID(r)
 	id := ps.ByName("stream_id")
 	if _, err := uuid.FromString(id); err != nil {
@@ -447,7 +448,7 @@ func (s Stream) Get(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		return
 	}
 	existing := new(stream.Stream)
-	err := db.View(stream.Get(existing, id))
+	err := s.View(stream.Get(existing, id))
 	switch {
 	case stream.IsMissing(err):
 		http.Error(w, err.Error(), http.StatusNotFound)
@@ -478,8 +479,6 @@ func (s Stream) Get(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 
 // Delete deletes the given Stream by ID.
 func (s Stream) Delete(w http.ResponseWriter, r *http.Request, ps htr.Params) {
-	db := s.DB
-
 	userID := mw.CtxGetUserID(r)
 	id := ps.ByName("stream_id")
 	if _, err := uuid.FromString(id); err != nil {
@@ -489,7 +488,7 @@ func (s Stream) Delete(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		return
 	}
 	existing := new(stream.Stream)
-	err := db.View(stream.Get(existing, id))
+	err := s.View(stream.Get(existing, id))
 	switch {
 	case stream.IsMissing(err):
 		http.Error(w, err.Error(), http.StatusNotFound)

@@ -54,8 +54,8 @@ func (a Admin) Bind(r *htr.Router) error {
 	}
 
 	r.GET("/admin/verify", mw.AuthAdmin(a.Verify, db))
-	r.POST("/admin/tickets", mw.AuthAdmin(a.HandleNewTicket, db))
-	r.DELETE("/admin/tickets/:ticket", mw.AuthAdmin(a.HandleDeleteTicket, db))
+	r.POST("/admin/tickets", mw.AuthAdmin(a.NewTicket, db))
+	r.DELETE("/admin/tickets/:ticket", mw.AuthAdmin(a.DeleteTicket, db))
 
 	return nil
 }
@@ -66,7 +66,7 @@ func (Admin) Verify(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 	}
 }
 
-func (a Admin) HandleNewTicket(w http.ResponseWriter, r *http.Request, _ htr.Params) {
+func (a Admin) NewTicket(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 	var (
 		countStr = r.FormValue("count")
 		count    = 1
@@ -123,7 +123,7 @@ func (a Admin) HandleNewTicket(w http.ResponseWriter, r *http.Request, _ htr.Par
 	}
 }
 
-func (a Admin) HandleDeleteTicket(w http.ResponseWriter, r *http.Request, ps htr.Params) {
+func (a Admin) DeleteTicket(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	db := a.DB
 	tStr := ps.ByName("ticket")
 	ticket, err := uuid.FromString(tStr)

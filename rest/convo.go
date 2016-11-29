@@ -63,7 +63,7 @@ func (c Convo) Bind(r *htr.Router) error {
 	))
 
 	r.PUT("/convos/:convo_id", mw.AuthUser(
-		c.Update,
+		c.Put,
 		db, mw.CtxSetUserID,
 	))
 
@@ -75,11 +75,10 @@ func (c Convo) Bind(r *htr.Router) error {
 	return nil
 }
 
-// Connect returns a Handle which opens and binds a WebSocket session to
-// a Convo.  The messages are transported as-is.
+// Connect is a Handle which opens and binds a WebSocket session to a
+// Convo.  Messages written by the WS client are bound in a
+// convo.Message with the username and timestamp.
 func (c Convo) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
-	db := c.DB
-
 	userID := mw.CtxGetUserID(r)
 	id := ps.ByName("convo_id")
 	if _, err := uuid.FromString(id); err != nil {
@@ -90,7 +89,7 @@ func (c Convo) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	}
 
 	conv := new(convo.Convo)
-	err := db.View(convo.Get(conv, id))
+	err := c.View(convo.Get(conv, id))
 	switch {
 	case convo.IsMissing(err):
 		http.Error(w, err.Error(), http.StatusNotFound)
@@ -111,7 +110,7 @@ func (c Convo) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	// Create a new river.Responder to respond to hangup
 	// requests from the backend.
 	var rsp river.Responder
-	err = db.Update(func(tx *bolt.Tx) (e error) {
+	err = c.Update(func(tx *bolt.Tx) (e error) {
 		rsp, e = river.NewResponder(tx,
 			river.HangupBucket,
 			store.Bucket(conv.ID),
@@ -148,7 +147,7 @@ func (c Convo) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		scrID uint64
 		first bool
 	)
-	err = db.Update(func(tx *bolt.Tx) (e error) {
+	err = c.Update(func(tx *bolt.Tx) (e error) {
 		scrID, first, e = scr.Checkin(tx)
 		return
 	})
@@ -160,7 +159,7 @@ func (c Convo) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	}
 
 	if first {
-		if err = db.Update(scr.Spawn); err != nil {
+		if err = c.Update(scr.Spawn); err != nil {
 			http.Error(w, errors.Wrap(
 				err, "failed to spawn Scribe",
 			).Error(), http.StatusInternalServerError)
@@ -170,7 +169,7 @@ func (c Convo) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 
 	// Create a Bus to connect to the convo.
 	var rv river.Bus
-	err = db.Update(func(tx *bolt.Tx) (e error) {
+	err = c.Update(func(tx *bolt.Tx) (e error) {
 		rv, e = river.NewBus(userID, conv.ID, tx)
 		return
 	})
@@ -195,7 +194,7 @@ func (c Convo) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	}.ServeHTTP(w, r)
 
 	var last bool
-	err = db.Update(func(tx *bolt.Tx) (e error) {
+	err = c.Update(func(tx *bolt.Tx) (e error) {
 		last, e = scr.Checkout(scrID, tx)
 		return
 	})
@@ -205,14 +204,14 @@ func (c Convo) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		).Error())
 	}
 	if last {
-		if err := scr.Hangup(db); err != nil {
+		if err := scr.Hangup(c.DB); err != nil {
 			log.Fatal(errors.Wrap(err,
 				"failed to hangup Scribe",
 			).Error())
 		}
 	}
 
-	err = db.Update(func(tx *bolt.Tx) (e error) {
+	err = c.Update(func(tx *bolt.Tx) (e error) {
 		eD := river.DeleteBus(userID, conv.ID, rv.ID())(tx)
 		eC := rv.Close()
 		switch {
@@ -256,15 +255,13 @@ func (c Convo) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 // GetMessages gets an array of convo.Message.  It can have filters
 // applied in order to get a specific range of Messages.
 func (c Convo) GetMessages(w http.ResponseWriter, r *http.Request, ps htr.Params) {
-	db := c.DB
-
 	convoID := ps.ByName("convo_id")
 
 	var result []convo.Message
 	userID := mw.CtxGetUserID(r)
 
 	conv := new(convo.Convo)
-	err := db.View(convo.Get(conv, convoID))
+	err := c.View(convo.Get(conv, convoID))
 	switch {
 	case convo.IsMissing(err):
 		http.Error(w, err.Error(), http.StatusNotFound)
@@ -282,7 +279,7 @@ func (c Convo) GetMessages(w http.ResponseWriter, r *http.Request, ps htr.Params
 		return
 	}
 
-	err = db.View(func(tx *bolt.Tx) (e error) {
+	err = c.View(func(tx *bolt.Tx) (e error) {
 		result, e = convo.GetMessages(convoID, tx)
 		return
 	})
@@ -305,11 +302,9 @@ func (c Convo) GetMessages(w http.ResponseWriter, r *http.Request, ps htr.Params
 	}
 }
 
-// Create returns a Handle over the DB which checks that the POSTed
-// Convo is valid and then creates it, returning the created Convo.
+// Create is a Handle over the DB which checks that the POSTed Convo is
+// valid and then creates it, returning the created Convo.
 func (c Convo) Create(w http.ResponseWriter, r *http.Request, _ htr.Params) {
-	db := c.DB
-
 	str := new(convo.Convo)
 	if err := json.NewDecoder(r.Body).Decode(str); err != nil {
 		http.Error(w, errors.Wrap(
@@ -336,7 +331,7 @@ func (c Convo) Create(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 		next++
 	}
 
-	err := db.View(store.Wrap(
+	err := c.View(store.Wrap(
 		convo.CheckNotExist(id),
 		users.CheckUsersExist(allUsers...),
 	))
@@ -357,7 +352,7 @@ func (c Convo) Create(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 		return
 	}
 
-	err = db.Update(store.Wrap(
+	err = c.Update(store.Wrap(
 		convo.CheckNotExist(id),
 		users.CheckUsersExist(allUsers...),
 		convo.Upsert(str),
@@ -387,10 +382,8 @@ func (c Convo) Create(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 	}
 }
 
-// Update returns a Handle which updates a Convo in the DB by ID.
-func (c Convo) Update(w http.ResponseWriter, r *http.Request, ps htr.Params) {
-	db := c.DB
-
+// Put is a Handle which updates a Convo in the DB by ID.
+func (c Convo) Put(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	userID := mw.CtxGetUserID(r)
 	id := ps.ByName("convo_id")
 	if _, err := uuid.FromString(id); err != nil {
@@ -422,9 +415,11 @@ func (c Convo) Update(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		next++
 	}
 
-	err := db.View(store.Wrap(
+	err := c.View(store.Wrap(
 		convo.CheckExists(id),
 		users.CheckUsersExist(allUsers...),
+		// TODO: FIXME: Make sure user is authorized.
+		// TODO: FIXME: Make sure Streams Put user is authorized.
 	))
 	if err != nil {
 		msg := errors.Wrap(
@@ -442,10 +437,13 @@ func (c Convo) Update(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	}
 
 	existing := new(convo.Convo)
-	if err := db.View(convo.Get(existing, id)); convo.IsMissing(err) {
+
+	err = c.View(convo.Get(existing, id))
+	switch {
+	case convo.IsMissing(err):
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
-	} else if err != nil {
+	case err != nil:
 		http.Error(w, errors.Wrapf(
 			err, "failed to get convo %#q", id,
 		).Error(), http.StatusInternalServerError)
@@ -453,7 +451,7 @@ func (c Convo) Update(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	}
 
 	// TODO: FIXME: Hang up removed read / write users
-	err = db.Update(store.Wrap(
+	err = c.Update(store.Wrap(
 		convo.CheckExists(id),
 		users.CheckUsersExist(allUsers...),
 		convo.Upsert(str),
@@ -479,21 +477,39 @@ func (c Convo) Update(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		).Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Go through the old Readers.  If that user wasn't in the new
+	// users map, it gets inserted as a false value.
+	for r := range existing.Readers {
+		ok := updateUsers[r]
+		updateUsers[r] = ok
+	}
+
+	// Notify convo members that they have been added or removed.
+	for u, ok := range updateUsers {
+		topic := notif.MakeUserTopic(u)
+		if ok {
+			err = notif.Encode(c.Pub, str, topic)
+		} else {
+			err = notif.Encode(c.Pub, stream.Removed(str.ID), topic)
+		}
+		if err != nil {
+			log.Printf("failed to notify user %q of convo update", u)
+		}
+	}
 }
 
-// GetAll returns a Handle which writes all Convos owned by the user to
-// the ResponseWriter.
+// GetAll is a Handle which writes all Convos owned by the user to the
+// ResponseWriter.
 //
 // TODO: Make Filters more flexible so users who aren't Owners can also
 //       get Convos they belong to.
 func (c Convo) GetAll(w http.ResponseWriter, r *http.Request, _ htr.Params) {
-	db := c.DB
-
 	// TODO: add search parameters
 	// TODO: add pagination
 	userID := mw.CtxGetUserID(r)
 	var allConvos []*convo.Convo
-	err := db.View(func(tx *bolt.Tx) (e error) {
+	err := c.View(func(tx *bolt.Tx) (e error) {
 		allConvos, e = convo.GetAll(userID)(tx)
 		return
 	})
@@ -512,11 +528,9 @@ func (c Convo) GetAll(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 	}
 }
 
-// Get returns a Handle which gets the given Convo by ID.  Any user who
-// is an Owner, Reader, or Writer can get a Convo by ID.
+// Get is a Handle which gets the given Convo by ID.  Any user who is an
+// Owner, Reader, or Writer can get a Convo by ID.
 func (c Convo) Get(w http.ResponseWriter, r *http.Request, ps htr.Params) {
-	db := c.DB
-
 	userID := mw.CtxGetUserID(r)
 	id := ps.ByName("convo_id")
 	if _, err := uuid.FromString(id); err != nil {
@@ -526,7 +540,7 @@ func (c Convo) Get(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		return
 	}
 	existing := new(convo.Convo)
-	err := db.View(convo.Get(existing, id))
+	err := c.View(convo.Get(existing, id))
 	switch {
 	case convo.IsMissing(err):
 		http.Error(w, err.Error(), http.StatusNotFound)
@@ -557,8 +571,6 @@ func (c Convo) Get(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 
 // Delete deletes the given Convo by ID.
 func (c Convo) Delete(w http.ResponseWriter, r *http.Request, ps htr.Params) {
-	db := c.DB
-
 	userID := mw.CtxGetUserID(r)
 	id := ps.ByName("convo_id")
 	if _, err := uuid.FromString(id); err != nil {
@@ -568,7 +580,7 @@ func (c Convo) Delete(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		return
 	}
 	existing := new(convo.Convo)
-	err := db.View(convo.Get(existing, id))
+	err := c.View(convo.Get(existing, id))
 	switch {
 	case convo.IsMissing(err):
 		http.Error(w, err.Error(), http.StatusNotFound)

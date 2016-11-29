@@ -31,7 +31,6 @@ func (t Token) Bind(r *htr.Router) error {
 func (t Token) Create(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 	// Unmarshal the Login from the Body
 	l := new(auth.Login)
-	db := t.DB
 	if err := json.NewDecoder(r.Body).Decode(l); err != nil {
 		http.Error(w, errors.Wrap(
 			err, "failed to decode Login").Error(),
@@ -39,7 +38,7 @@ func (t Token) Create(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 		return
 	}
 
-	if err := db.View(auth.Check(l)); err != nil {
+	if err := t.View(auth.Check(l)); err != nil {
 		switch err.(type) {
 		case auth.ErrInvalid, auth.ErrMissing:
 			http.Error(w, err.Error(), http.StatusNotFound)
@@ -52,7 +51,7 @@ func (t Token) Create(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 	}
 
 	sesh := &auth.Session{}
-	if err := db.Update(auth.NewSession(
+	if err := t.Update(auth.NewSession(
 		sesh,
 		time.Now().Add(auth.Expiration),
 		auth.Expiration,
@@ -79,10 +78,9 @@ func (t Token) Create(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 
 func (t Token) Delete(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	token := mw.CtxGetToken(r)
-	db := t.DB
 
 	// len == 0 case handled by other handler
-	if err := db.View(auth.CheckToken(token)); err != nil {
+	if err := t.View(auth.CheckToken(token)); err != nil {
 		var code int
 		switch err.(type) {
 		case auth.ErrMissingSession, auth.ErrTokenExpired:
@@ -95,7 +93,7 @@ func (t Token) Delete(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		return
 	}
 
-	if err := db.Update(auth.DeleteToken(token)); err != nil {
+	if err := t.Update(auth.DeleteToken(token)); err != nil {
 		var code int
 		switch err.(type) {
 		case auth.ErrMissingSession:
