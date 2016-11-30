@@ -21,6 +21,12 @@ const Frequency = 1 * time.Second
 // before writing them to disk.
 const MaxBuffer = 128
 
+// Entry is a Scribe log entry.  Its key is an RFC3339 timestamp and its
+// value is the JSON representation of the message.
+type Entry struct {
+	key, value []byte
+}
+
 // Scribe is a BUS consumer which does nothing but log received messages
 // to the Messages bucket under its ID (which is the same ID as the
 // stream it belongs to.)
@@ -47,12 +53,6 @@ func (s Scribe) CheckExists(tx *bolt.Tx) error {
 		return errMissing(s)
 	}
 	return nil
-}
-
-// Entry is a Scribe log entry.  Its key is an RFC3339 timestamp and its
-// value is the JSON representation of the message.
-type Entry struct {
-	key, value []byte
 }
 
 // Checkin is a bolt Update function which a sequence ID, and true, if
@@ -101,6 +101,19 @@ func (s Scribe) Checkout(id uint64, tx *bolt.Tx) (bool, error) {
 	// If anything remains after deleting, return false.
 	k, _ := scrB.Cursor().First()
 	return k == nil, nil
+}
+
+// DeleteCheckins deletes the Checkin / Checkout bucket for the Scribe.
+// Only use this once all convo members have disconnected.
+func (s Scribe) DeleteCheckins(tx *bolt.Tx) error {
+	b, err := store.GetNestedBucket(
+		tx.Bucket(river.RiverBucket),
+		ScribeBucket,
+	)
+	if err != nil {
+		return err
+	}
+	return b.DeleteBucket([]byte(s))
 }
 
 // Spawn is a Bolt Update function which creates a new Scribe Bus,

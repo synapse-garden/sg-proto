@@ -17,6 +17,24 @@ type Message struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
+// InitMessages initializes a Message bucket for the given Stream ID.
+func InitMessages(id string) func(*bolt.Tx) error {
+	return func(tx *bolt.Tx) (e error) {
+		_, e = tx.Bucket(
+			MessageBucket,
+		).CreateBucketIfNotExists([]byte(id))
+		return
+	}
+}
+
+// DeleteMessages deletes a Message bucket.  Don't use this until the
+// Scribe has been hung up.
+func DeleteMessages(id string) func(*bolt.Tx) error {
+	return func(tx *bolt.Tx) error {
+		return tx.Bucket(MessageBucket).DeleteBucket([]byte(id))
+	}
+}
+
 // GetMessageRange gets a slice of up to max Messages for the given
 // time range in the given Convo.
 func GetMessageRange(
