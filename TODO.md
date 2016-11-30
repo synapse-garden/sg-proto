@@ -159,6 +159,8 @@
 - [x] Convo message parse errors are NOT sent to the websocket!
 - [x] Convo Delete does not do anything if no errors.
 - [x] Stream Delete does not do anything if no errors.
+- [x] Convo connect/disconnect notifs don't specify convo ID.
+- [x] Stream connect/disconnect notifs don't specify stream ID.
 - [ ] Stream Put does not require the user to own the Stream.
 - [ ] Convo Put does not require the user to own the Convo.
 - [ ] Better testing of REST resource security.
