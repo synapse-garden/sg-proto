@@ -152,6 +152,11 @@
       Dial and usage.  Data race found due to mangos Init!
 	  https://github.com/go-mangos/mangos/issues/236
 - [x] Convo message parse errors are NOT sent to the websocket!
+- [x] Convo Delete does not do anything if no errors.
+- [x] Stream Delete does not do anything if no errors.
+- [ ] Stream Put does not require the user to own the Stream.
+- [ ] Convo Put does not require the user to own the Convo.
+- [ ] Better testing of REST resource security.
 - [ ] Deleting the user's profile doesn't close his Streams.
 - [ ] Surveyor / Respondent don't keep track of who's still alive.  If a
       Responder removes itself from its bucket, the Survey will fail.
