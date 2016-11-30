@@ -457,7 +457,6 @@ func (c Convo) Put(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	err := c.View(store.Wrap(
 		convo.CheckExists(id),
 		users.CheckUsersExist(allUsers...),
-		// TODO: FIXME: Make sure user is authorized.
 	))
 	if err != nil {
 		msg := errors.Wrap(err, "failed to check new Convo").Error()
@@ -482,6 +481,12 @@ func (c Convo) Put(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		http.Error(w, errors.Wrapf(
 			err, "failed to get convo %#q", id,
 		).Error(), http.StatusInternalServerError)
+		return
+	case existing.Owner != userID:
+		http.Error(w, fmt.Sprintf(
+			"user %q does not own Convo %q",
+			userID, id,
+		), http.StatusUnauthorized)
 		return
 	}
 

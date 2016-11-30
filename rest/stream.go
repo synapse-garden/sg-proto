@@ -384,7 +384,6 @@ func (s Stream) Put(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	err := s.View(store.Wrap(
 		stream.CheckExists(id),
 		users.CheckUsersExist(allUsers...),
-		// TODO: FIXME: Make sure user is authorized.
 	))
 	if err != nil {
 		msg := errors.Wrap(err, "failed to check new Stream").Error()
@@ -409,6 +408,12 @@ func (s Stream) Put(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		http.Error(w, errors.Wrapf(
 			err, "failed to get stream %#q", id,
 		).Error(), http.StatusInternalServerError)
+		return
+	case existing.Owner != userID:
+		http.Error(w, fmt.Sprintf(
+			"user %q does not own Stream %q",
+			userID, id,
+		), http.StatusUnauthorized)
 		return
 	}
 
