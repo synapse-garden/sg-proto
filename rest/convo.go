@@ -7,9 +7,11 @@ import (
 	"net/http"
 
 	"github.com/synapse-garden/sg-proto/convo"
+	"github.com/synapse-garden/sg-proto/notif"
 	mw "github.com/synapse-garden/sg-proto/rest/middleware"
 	"github.com/synapse-garden/sg-proto/rest/ws"
 	"github.com/synapse-garden/sg-proto/store"
+	"github.com/synapse-garden/sg-proto/stream"
 	"github.com/synapse-garden/sg-proto/stream/river"
 	"github.com/synapse-garden/sg-proto/users"
 	"github.com/synapse-garden/sg-proto/util"
@@ -21,9 +23,13 @@ import (
 	xws "golang.org/x/net/websocket"
 )
 
+// ConvoNotifs is the notif code for Convos.
+const ConvoNotifs = "convos"
+
 // Convo implements API.  It manages Convos.
 type Convo struct {
 	*bolt.DB
+	river.Pub
 }
 
 // Bind implements API.Bind on Convo.
@@ -33,7 +39,14 @@ func (c Convo) Bind(r *htr.Router) error {
 		return errors.New("Convo DB handle must not be nil")
 	}
 
-	if err := db.Update(river.ClearRivers); err != nil {
+	err := db.Update(func(tx *bolt.Tx) (e error) {
+		if err := river.ClearRivers(tx); err != nil {
+			return err
+		}
+		c.Pub, e = river.NewPub(ConvoNotifs, NotifStream, tx)
+		return nil
+	})
+	if err != nil {
 		return err
 	}
 
@@ -186,6 +199,14 @@ func (c Convo) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		return
 	}
 
+	// Notify listening convo members that the user has joined.
+	for r := range conv.Readers {
+		err = notif.Encode(c.Pub, stream.Connected(userID), notif.MakeUserTopic(r))
+		if err != nil {
+			log.Printf("failed to notify user %q of convo join", r)
+		}
+	}
+
 	xws.Server{
 		Handshake: ws.Check,
 		// Use the HangupSender.Read to hang up the
@@ -249,6 +270,14 @@ func (c Convo) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		log.Fatalf("ERROR: %s", errors.Wrapf(
 			err, "failed to clean up River %#q", id,
 		).Error())
+	}
+
+	// Notify convo members that the user has left.
+	for u := range conv.Readers {
+		err = notif.Encode(c.Pub, stream.Disconnected(userID), notif.MakeUserTopic(u))
+		if err != nil {
+			log.Printf("failed to notify user %q of stream join", u)
+		}
 	}
 }
 
@@ -372,6 +401,14 @@ func (c Convo) Create(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 		return
 	}
 
+	// Notify convo members that they have been added.
+	for u := range str.Readers {
+		err = notif.Encode(c.Pub, str, notif.MakeUserTopic(u))
+		if err != nil {
+			log.Printf("failed to notify user %q of convo add", u)
+		}
+	}
+
 	if err := json.NewEncoder(w).Encode(str); err != nil {
 		http.Error(w, errors.Wrap(
 			err, "failed to write Convo to user",
@@ -403,9 +440,13 @@ func (c Convo) Put(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 
 	allUsers := make([]string, len(str.Readers)+len(str.Writers)+1)
 	allUsers[0] = userID
+
+	updateUsers := map[string]bool{userID: true}
+
 	next := 1
 	for r := range str.Readers {
 		allUsers[next] = r
+		updateUsers[r] = true
 		next++
 	}
 	for w := range str.Writers {
@@ -598,5 +639,13 @@ func (c Convo) Delete(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 			id, err.Error(),
 		), http.StatusInternalServerError)
 		return
+	}
+
+	// Notify convo members that it has been deleted.
+	for r := range existing.Readers {
+		err = notif.Encode(c.Pub, stream.Deleted(id), notif.MakeUserTopic(r))
+		if err != nil {
+			log.Printf("failed to notify user %q of convo delete", r)
+		}
 	}
 }

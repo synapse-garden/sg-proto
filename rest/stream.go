@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/synapse-garden/sg-proto/notif"
 	mw "github.com/synapse-garden/sg-proto/rest/middleware"
 	"github.com/synapse-garden/sg-proto/rest/ws"
 	"github.com/synapse-garden/sg-proto/store"
@@ -20,9 +21,13 @@ import (
 	xws "golang.org/x/net/websocket"
 )
 
-// Stream sets up the Streams API on the Router for the given DB.
+const StreamNotifs = "streams"
+
+// Stream implements API.  It manages Streams and websocket connections
+// to them.
 type Stream struct {
 	*bolt.DB
+	river.Pub
 }
 
 // Bind implements API.Bind on Stream.
@@ -32,9 +37,17 @@ func (s Stream) Bind(r *htr.Router) error {
 		return errors.New("Stream DB handle must not be nil")
 	}
 
-	if err := db.Update(river.ClearRivers); err != nil {
+	err := db.Update(func(tx *bolt.Tx) (e error) {
+		if err := river.ClearRivers(tx); err != nil {
+			return err
+		}
+		s.Pub, e = river.NewPub(StreamNotifs, NotifStream, tx)
+		return
+	})
+	if err != nil {
 		return err
 	}
+
 	// vx.y.0:
 	//   - TODO: assign work, pin version
 	//   - Fractal / graph Stream
@@ -184,6 +197,14 @@ func (s Stream) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		return
 	}
 
+	// Notify stream members that the user has joined.
+	for u := range str.Readers {
+		err = notif.Encode(s.Pub, stream.Connected(userID), notif.MakeUserTopic(u))
+		if err != nil {
+			log.Printf("failed to notify user %q of stream join", u)
+		}
+	}
+
 	xws.Server{
 		Handshake: ws.Check,
 		// Use the HangupSender.Read to hang up the river if a
@@ -307,6 +328,14 @@ func (s Stream) Create(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 		return
 	}
 
+	// Notify stream members that they have been added.
+	for u := range str.Readers {
+		err = notif.Encode(s.Pub, str, notif.MakeUserTopic(u))
+		if err != nil {
+			log.Printf("failed to notify user %q of stream add", u)
+		}
+	}
+
 	if err := json.NewEncoder(w).Encode(str); err != nil {
 		http.Error(w, errors.Wrap(
 			err, "failed to write Stream to user",
@@ -338,9 +367,13 @@ func (s Stream) Put(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 
 	allUsers := make([]string, len(str.Readers)+len(str.Writers)+1)
 	allUsers[0] = userID
+
+	updateUsers := map[string]bool{userID: true}
+
 	next := 1
 	for r := range str.Readers {
 		allUsers[next] = r
+		updateUsers[r] = true
 		next++
 	}
 	for w := range str.Writers {
@@ -405,6 +438,26 @@ func (s Stream) Put(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 			err, "failed to write Stream to user",
 		).Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Go through the old Readers.  If that user wasn't in the new
+	// users map, it gets inserted as a false value.
+	for r := range existing.Readers {
+		ok := updateUsers[r]
+		updateUsers[r] = ok
+	}
+
+	// Notify convo members that they have been added or removed.
+	for u, ok := range updateUsers {
+		topic := notif.MakeUserTopic(u)
+		if ok {
+			err = notif.Encode(s.Pub, str, topic)
+		} else {
+			err = notif.Encode(s.Pub, stream.Removed(str.ID), topic)
+		}
+		if err != nil {
+			log.Printf("failed to notify user %q of stream update", u)
+		}
 	}
 }
 
@@ -507,5 +560,11 @@ func (s Stream) Delete(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		return
 	}
 
-	return
+	// Notify stream members that it has been deleted.
+	for r := range existing.Readers {
+		err = notif.Encode(s.Pub, stream.Deleted(id), notif.MakeUserTopic(r))
+		if err != nil {
+			log.Printf("failed to notify user %q of stream delete", r)
+		}
+	}
 }
