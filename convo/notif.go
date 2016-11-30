@@ -35,3 +35,10 @@ func (c *Convo) Disconnected(user string) store.Resourcer {
 		StreamID: c.ID,
 	}
 }
+
+// Deleteed is a Resourcer which can notify that the convo has been
+// deleted.
+type Deleted string
+
+// Resource implements Resourcer.Resource on Deleted.
+func (Deleted) Resource() store.Resource { return "convo-deleted" }

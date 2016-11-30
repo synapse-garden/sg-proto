@@ -648,7 +648,7 @@ func (c Convo) Delete(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 
 	// Notify convo members that it has been deleted.
 	for r := range existing.Readers {
-		err = notif.Encode(c.Pub, stream.Deleted(id), notif.MakeUserTopic(r))
+		err = notif.Encode(c.Pub, convo.Deleted(id), notif.MakeUserTopic(r))
 		if err != nil {
 			log.Printf("failed to notify user %q of convo delete", r)
 		}
