@@ -161,8 +161,8 @@
 - [x] Stream Delete does not do anything if no errors.
 - [x] Convo connect/disconnect notifs don't specify convo ID.
 - [x] Stream connect/disconnect notifs don't specify stream ID.
-- [ ] Stream Put does not require the user to own the Stream.
-- [ ] Convo Put does not require the user to own the Convo.
+- [x] Stream Put does not require the user to own the Stream.
+- [x] Convo Put does not require the user to own the Convo.
 - [ ] Better testing of REST resource security.
 - [ ] Deleting the user's profile doesn't close his Streams.
 - [ ] Surveyor / Respondent don't keep track of who's still alive.  If a
