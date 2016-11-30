@@ -560,6 +560,14 @@ func (s Stream) Delete(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		return
 	}
 
+	if err := s.Update(stream.Delete(id)); err != nil {
+		http.Error(w, fmt.Sprintf(
+			"failed to delete convo %#q: %s",
+			id, err.Error(),
+		), http.StatusInternalServerError)
+		return
+	}
+
 	// Notify stream members that it has been deleted.
 	for r := range existing.Readers {
 		err = notif.Encode(s.Pub, stream.Deleted(id), notif.MakeUserTopic(r))
