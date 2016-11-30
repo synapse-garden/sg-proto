@@ -358,9 +358,7 @@ func (c Convo) Create(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 		convo.Upsert(str),
 	))
 	if err != nil {
-		msg := errors.Wrap(
-			err, "failed to create Convo",
-		).Error()
+		msg := errors.Wrap(err, "failed to create Convo").Error()
 		var code int
 		switch {
 		case convo.IsExists(err):
@@ -419,12 +417,9 @@ func (c Convo) Put(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		convo.CheckExists(id),
 		users.CheckUsersExist(allUsers...),
 		// TODO: FIXME: Make sure user is authorized.
-		// TODO: FIXME: Make sure Streams Put user is authorized.
 	))
 	if err != nil {
-		msg := errors.Wrap(
-			err, "failed to check new Convo",
-		).Error()
+		msg := errors.Wrap(err, "failed to check new Convo").Error()
 		var code int
 		switch {
 		case users.IsMissing(err), convo.IsMissing(err):
@@ -437,7 +432,6 @@ func (c Convo) Put(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	}
 
 	existing := new(convo.Convo)
-
 	err = c.View(convo.Get(existing, id))
 	switch {
 	case convo.IsMissing(err):
@@ -598,7 +592,7 @@ func (c Convo) Delete(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		return
 	}
 
-	if err := c.DB.Update(convo.Delete([]byte(id))); err != nil {
+	if err := c.Update(convo.Delete([]byte(id))); err != nil {
 		http.Error(w, fmt.Sprintf(
 			"failed to delete convo %#q: %s",
 			id, err.Error(),

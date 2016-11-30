@@ -232,7 +232,7 @@ func (s Stream) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 
 	// Notify stream members that the user has left.
 	for u := range str.Readers {
-		err = notif.Encode(s.Pub, str, notif.MakeUserTopic(u))
+		err = notif.Encode(s.Pub, stream.Disconnected(userID), notif.MakeUserTopic(u))
 		if err != nil {
 			log.Printf("failed to notify user %q of stream leave", u)
 		}
@@ -351,11 +351,10 @@ func (s Stream) Put(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	err := s.View(store.Wrap(
 		stream.CheckExists(id),
 		users.CheckUsersExist(allUsers...),
+		// TODO: FIXME: Make sure user is authorized.
 	))
 	if err != nil {
-		msg := errors.Wrap(
-			err, "failed to check new Stream",
-		).Error()
+		msg := errors.Wrap(err, "failed to check new Stream").Error()
 		var code int
 		switch {
 		case users.IsMissing(err), stream.IsMissing(err):
@@ -368,10 +367,12 @@ func (s Stream) Put(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	}
 
 	existing := new(stream.Stream)
-	if err := s.View(stream.Get(existing, id)); stream.IsMissing(err) {
+	err = s.View(stream.Get(existing, id))
+	switch {
+	case stream.IsMissing(err):
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
-	} else if err != nil {
+	case err != nil:
 		http.Error(w, errors.Wrapf(
 			err, "failed to get stream %#q", id,
 		).Error(), http.StatusInternalServerError)
