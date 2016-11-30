@@ -82,10 +82,10 @@ func GetMessageRange(
 	return result, nil
 }
 
-// GetMessages gets a slice of up to 10 Messages for the last week in
+// GetMessages gets a slice of up to 50 Messages for the last week in
 // the given Convo.
 func GetMessages(convoID string, tx *bolt.Tx) ([]Message, error) {
 	now := time.Now()
 	then := now.Add(-7 * 24 * time.Hour)
-	return GetMessageRange(convoID, now, then, 50, tx)
+	return GetMessageRange(convoID, then, now, 50, tx)
 }
