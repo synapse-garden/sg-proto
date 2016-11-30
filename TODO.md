@@ -96,6 +96,8 @@
 
 - [ ] Organize TODOs
 
+- [ ] Remove self from stream / convo if you don't want to be in it,
+      even if you don't own it.
 - [ ] Redesign streams / hangup event chains
 - [ ] Don't encode the same resource over and over for notifs.
 - [ ] No way of cleaning up failed Scribes
