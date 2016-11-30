@@ -166,6 +166,9 @@
 - [x] Stream Put does not require the user to own the Stream.
 - [x] Convo Put does not require the user to own the Convo.
 - [x] Convo Messages GET has incorrect range
+- [x] Convo delete notif uses stream delete
+- [ ] 404 on empty messages, should be populated on convo create
+      and deleted on convo delete.
 - [ ] Better testing of REST resource security.
 - [ ] Deleting the user's profile doesn't close his Streams.
 - [ ] Surveyor / Respondent don't keep track of who's still alive.  If a
