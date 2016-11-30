@@ -201,7 +201,7 @@ func (c Convo) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 
 	// Notify listening convo members that the user has joined.
 	for r := range conv.Readers {
-		err = notif.Encode(c.Pub, stream.Connected(userID), notif.MakeUserTopic(r))
+		err = notif.Encode(c.Pub, conv.Connected(userID), notif.MakeUserTopic(r))
 		if err != nil {
 			log.Printf("failed to notify user %q of convo join", r)
 		}
@@ -274,7 +274,7 @@ func (c Convo) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 
 	// Notify convo members that the user has left.
 	for u := range conv.Readers {
-		err = notif.Encode(c.Pub, stream.Disconnected(userID), notif.MakeUserTopic(u))
+		err = notif.Encode(c.Pub, conv.Disconnected(userID), notif.MakeUserTopic(u))
 		if err != nil {
 			log.Printf("failed to notify user %q of stream join", u)
 		}

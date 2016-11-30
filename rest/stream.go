@@ -199,7 +199,7 @@ func (s Stream) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 
 	// Notify stream members that the user has joined.
 	for u := range str.Readers {
-		err = notif.Encode(s.Pub, stream.Connected(userID), notif.MakeUserTopic(u))
+		err = notif.Encode(s.Pub, str.Connected(userID), notif.MakeUserTopic(u))
 		if err != nil {
 			log.Printf("failed to notify user %q of stream join", u)
 		}
@@ -253,7 +253,7 @@ func (s Stream) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 
 	// Notify stream members that the user has left.
 	for u := range str.Readers {
-		err = notif.Encode(s.Pub, stream.Disconnected(userID), notif.MakeUserTopic(u))
+		err = notif.Encode(s.Pub, str.Disconnected(userID), notif.MakeUserTopic(u))
 		if err != nil {
 			log.Printf("failed to notify user %q of stream leave", u)
 		}
