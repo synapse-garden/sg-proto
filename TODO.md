@@ -48,7 +48,7 @@
   - [ ] 2. HTTP error codes which have some relevance to the API user to help
        clarify what went wrong without passing forward sensitive data.
 - [ ] Better database testing -- maybe a memory mapped file or some other
-   option so our setups / teardowns don't have to thrash the filesystem.
+      option so our setups / teardowns don't have to thrash the filesystem.
 - [ ] Testable rest.Bind
 - [ ] Maybe a database mock?
 - [ ] Caching database wrapper
@@ -88,8 +88,18 @@
 
 ## Unorganized
 
+- [x] The design of Rivers must support a future implementation which
+      permits the API to use req/rep Rivers to control the behavior of
+	  receivers.
+- [x] Reorganize streams package with more abstraction
+- [x] Standardize on JSON camelCase vs snake_case etc
+
 - [ ] Organize TODOs
 
+- [ ] Redesign streams / hangup event chains
+- [ ] Don't encode the same resource over and over for notifs.
+- [ ] No way of cleaning up failed Scribes
+- [ ] REST resources as interface / code gen?
 - [ ] Tighten up convo message funcs
 - [ ] Make convo message blocks
 - [ ] Test convo message db funcs
@@ -101,12 +111,7 @@
       love of God!
 - [ ] REST Stream tests brittle
 - [ ] Survey response errors need a useful error implementation.
-- [x] The design of Rivers must support a future implementation which
-      permits the API to use req/rep Rivers to control the behavior of
-	  receivers.
-- [x] Reorganize streams package with more abstraction
 - [ ] Swagger HTTP API doc
-- [x] Standardize on JSON camelCase vs snake_case etc
 - [ ] Poms / some kind of work measure
 - [ ] Some kind of psych features
 - [ ] Make a decision on Rust
@@ -173,14 +178,13 @@
     - [ ] Configure cache settings?
 - [ ] Deleting the user's profile doesn't eliminate his owned objects.
 - [ ] Bad usernames cannot be looked up for expired Sessions
-- [ ] No way of cleaning up failed Scribes
 
 ## Admin API
 
 - [x] AuthAdmin middleware
 - [x] Create ticket
 - [ ] GET /tickets?per_page=n&page=m
-- [x] Delete ticket
+- [x] Delete ticket(s)
 - [x] Master API key printed on startup?
   - [x] Use own API key via config?
   - [x] Fix admin key nonsense
@@ -189,7 +193,7 @@
 
 - [x] Split Streams and Rivers
 - [ ] Tighten up Convo REST API, add defered cleanups
-- [ ] Update README.md and CONTRIBUTING.md
+- [ ] Update README.md and CONTRIBUTING.md, clean up 0.0.1 TODO
 - [ ] Comment all exported functions, types, methods, and constants
 - [ ] Make sure not just anyone can get a refresh token
 - [ ] Log ERROR statements on all unexpected internal errors
@@ -219,6 +223,8 @@
 - [x] Log in
 - [x] Log out
 - [ ] Have bounty
+- [ ] User is notified when profile changes (e.g. bounty increase)
+- [ ] Update with new password
 - [x] Test rest.Incept auth.Login creation
 
 ## Streams
@@ -233,8 +239,11 @@
 - [x] Users can GET /streams they belong to, not just Streams they own
 - [x] SSL "wss" works correctly
 - [x] Multiple Bus Rivers per Stream per User
-- [ ] Removing a user from a Stream hangs up the user's Stream bindings
+- [x] User is notified when added to a Stream
+- [x] Stream members are notified when a user connects to a Stream
+- [x] Stream members are notified when a user leaves a Stream
 - [ ] Close running stream from API (use Survey/Resp)
+- [ ] Removing a user from a Stream hangs up the user's Stream bindings
 - [ ] Use https://golang.org/pkg/net/http/httptrace/ for REST test
 - [ ] Inactive Rivers eventually time out
 
@@ -265,6 +274,7 @@
 ## Chat
 
 - [x] Convos are Streams with a REST interface
+- [ ] Convo websocket interactions are well-tested
 - [ ] Removing a user from a convo hangs up their convos
 - [x] Everything is identical to Bus rivers but:
   - [x] convos have their own bucket
@@ -295,8 +305,11 @@
   - [ ] Paginate
   - [ ] Filter by max messages
     - [x] Default to last 50
-- [ ] Notify when user opens a chat to users
-- [ ] User notified when they are added or removed
+- [x] Notify user when someone creates a convo with them
+- [x] Notify user when they are added to a convo
+- [x] Notify user when they are removed from convo
+- [x] Notify user when someone connects to convo
+- [x] Notify user when someone leaves convo
 - [ ] Handle errors sanely
 - [ ] Test what happens when one or more users hang up, etc
 
@@ -305,3 +318,4 @@
 - [ ] Create item with bounty and due date
 - [ ] Complete item before due date, receive bounty
 - [ ] Notifications
+  - [ ] Notify on CRUD
