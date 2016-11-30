@@ -1,7 +1,6 @@
 package convo
 
 import (
-	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"log"
@@ -72,13 +71,10 @@ func (s Scribe) Checkin(tx *bolt.Tx) (uint64, bool, error) {
 	seq := scrB.Sequence()
 	seqBs := make([]byte, 8)
 	binary.LittleEndian.PutUint64(seqBs, seq)
-	if k, _ := scrB.Cursor().First(); k != nil {
-		// Someone has already checked in.
-		return seq, false, scrB.Put(seqBs, nil)
-	}
 
-	// This is the first checkin.
-	return seq, true, scrB.Put(seqBs, nil)
+	// If anyone else exists, return false.
+	k, _ := scrB.Cursor().First()
+	return seq, k == nil, scrB.Put(seqBs, nil)
 }
 
 // Checkout is a bolt Update function which takes a sequence ID, and
@@ -96,22 +92,15 @@ func (s Scribe) Checkout(id uint64, tx *bolt.Tx) (bool, error) {
 
 	seqBs := make([]byte, 8)
 	binary.LittleEndian.PutUint64(seqBs, id)
-	c := scrB.Cursor()
-	count := 0
-	for k, _ := c.First(); k != nil; k, _ = c.Next() {
-		if bytes.Equal(k, seqBs) {
-			if err := scrB.Delete(k); err != nil {
-				return false, err
-			}
-		}
-		count++
+
+	// First delete our entry.
+	if err := scrB.Delete(seqBs); err != nil {
+		return false, err
 	}
-	if count == 1 {
-		// This is the last checkout.
-		return true, scrB.Delete(seqBs)
-	}
-	// There are still others to check out first.
-	return false, scrB.Delete(seqBs)
+
+	// If anything remains after deleting, return false.
+	k, _ := scrB.Cursor().First()
+	return k == nil, nil
 }
 
 // Spawn is a Bolt Update function which creates a new Scribe Bus,
