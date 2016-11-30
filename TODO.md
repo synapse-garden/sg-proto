@@ -165,6 +165,7 @@
 - [x] Stream connect/disconnect notifs don't specify stream ID.
 - [x] Stream Put does not require the user to own the Stream.
 - [x] Convo Put does not require the user to own the Convo.
+- [x] Convo Messages GET has incorrect range
 - [ ] Better testing of REST resource security.
 - [ ] Deleting the user's profile doesn't close his Streams.
 - [ ] Surveyor / Respondent don't keep track of who's still alive.  If a
