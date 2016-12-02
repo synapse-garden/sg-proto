@@ -3,6 +3,8 @@ package river
 import (
 	"bytes"
 
+	"github.com/synapse-garden/sg-proto/store"
+
 	"github.com/boltdb/bolt"
 	"github.com/go-mangos/mangos"
 	"github.com/go-mangos/mangos/protocol/pub"
@@ -62,4 +64,17 @@ func NewPub(id, streamID string, tx *bolt.Tx) (r Pub, e error) {
 	}
 
 	return sock, nil
+}
+
+// DeletePub deletes the Pub's entry for the given id in the given stream.
+func DeletePub(id, streamID string, tx *bolt.Tx) error {
+	b, err := store.GetNestedBucket(
+		tx.Bucket(RiverBucket),
+		store.Bucket(streamID),
+	)
+	if err != nil {
+		return err
+	}
+
+	return b.Delete([]byte(id))
 }
