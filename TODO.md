@@ -176,6 +176,9 @@
 - [x] Convo.Bind should never silently drop an error on NewPub.
 - [x] convo.Scribe.DeleteCheckins should not panic if the Checkins
       bucket is missing; this is normal and means no checkins exist yet.
+- [x] If user tries to check out of deleted convo (i.e. closes websocket), fatal error occurs:
+  > failed to check out of convo: no such bucket `81c4b367-7cd0-46a1-90d0-618fb5c790b8`
+- [ ] Old Bus buckets should be deleted after the convo or stream is deleted.o
 - [ ] Diagnose occasional test failures in RiverSuite.TestNewBus
 - [ ] Convo / Stream PUT which removes users must also hang them up.
 - [ ] Potential races, e.g. on Convo DELETE with Surveys.
