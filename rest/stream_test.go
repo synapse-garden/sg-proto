@@ -6,13 +6,11 @@ import (
 	htt "net/http/httptest"
 
 	"github.com/synapse-garden/sg-proto/auth"
-	"github.com/synapse-garden/sg-proto/incept"
 	"github.com/synapse-garden/sg-proto/rest"
 	"github.com/synapse-garden/sg-proto/store"
 	"github.com/synapse-garden/sg-proto/stream"
 	"github.com/synapse-garden/sg-proto/stream/river"
 	sgt "github.com/synapse-garden/sg-proto/testing"
-	"github.com/synapse-garden/sg-proto/users"
 
 	"github.com/boltdb/bolt"
 	"github.com/julienschmidt/httprouter"
@@ -22,17 +20,10 @@ import (
 )
 
 func (s *RESTSuite) TestStream(c *C) {
-	// Make two accounts.
-	user1 := &auth.Login{
-		User:   users.User{Name: "bodie"},
-		PWHash: []byte("hello"),
-	}
-	user2 := &auth.Login{
-		User:   users.User{Name: "bob"},
-		PWHash: []byte("12345"),
-	}
-	c.Assert(incept.Incept(s.tickets[0], user1, s.db), IsNil)
-	c.Assert(incept.Incept(s.tickets[1], user2, s.db), IsNil)
+	user1, err := sgt.MakeLogin("bodie", "hello", s.db)
+	c.Assert(err, IsNil)
+	user2, err := sgt.MakeLogin("bob", "12345", s.db)
+	c.Assert(err, IsNil)
 
 	// Get a session token for each.
 	sesh1, sesh2 := new(auth.Session), new(auth.Session)
