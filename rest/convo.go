@@ -595,7 +595,7 @@ func (c Convo) Get(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		!existing.Writers[userID]:
 		http.Error(w, fmt.Sprintf(
 			"user %#q not a member of convo %#q",
-			id, userID,
+			userID, id,
 		), http.StatusUnauthorized)
 		return
 	}
