@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/synapse-garden/sg-proto/notif"
 	mw "github.com/synapse-garden/sg-proto/rest/middleware"
@@ -563,6 +564,44 @@ func (s Stream) Delete(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 			id, userID,
 		), http.StatusUnauthorized)
 		return
+	}
+
+	// Before deleting the Stream, make sure everyone in it is hung
+	// up using a Surveyor.
+	var surv river.Surveyor
+hangupReaders:
+	for user := range existing.Readers {
+		// Hang up each Reader in the Stream.
+		err = s.Update(func(tx *bolt.Tx) (e error) {
+			surv, e = river.NewSurvey(tx,
+				30*time.Millisecond,
+				river.HangupBucket,
+				store.Bucket(id),
+				store.Bucket(user),
+			)
+			return
+		})
+		switch {
+		case river.IsStreamMissing(err):
+			// Nobody has created a Hangup river yet!
+			// Nothing to do here.
+			break hangupReaders
+		case err != nil:
+			http.Error(w, errors.Wrapf(err,
+				"failed to create hangup surveyor",
+			).Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// NOTE: The Survey is used OUTSIDE of the Update.
+		//       Otherwise, a lethal deadlock will occur.
+		err = river.MakeSurvey(surv, river.HUP, river.OK)
+		if err != nil {
+			http.Error(w, errors.Wrapf(err,
+				"failed to make hangup survey",
+			).Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	if err := s.Update(stream.Delete(id)); err != nil {
