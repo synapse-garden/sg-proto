@@ -220,7 +220,11 @@ func (c Convo) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		last, e = scr.Checkout(scrID, tx)
 		return
 	})
-	if err != nil {
+	switch {
+	case store.IsMissingBucket(err):
+		// The checkout was already removed -- probably the convo
+		// was deleted.  Nothing to do here.
+	case err != nil:
 		log.Fatal(errors.Wrap(err,
 			"failed to check out of convo",
 		).Error())
