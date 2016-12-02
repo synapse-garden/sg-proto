@@ -178,6 +178,7 @@
       bucket is missing; this is normal and means no checkins exist yet.
 - [x] If user tries to check out of deleted convo (i.e. closes websocket), fatal error occurs:
   > failed to check out of convo: no such bucket `81c4b367-7cd0-46a1-90d0-618fb5c790b8`
+- [x] Empty GET on /convos should return [], not null
 - [ ] Old Bus buckets should be deleted after the convo or stream is deleted.o
 - [ ] Diagnose occasional test failures in RiverSuite.TestNewBus
 - [ ] Convo / Stream PUT which removes users must also hang them up.
@@ -213,6 +214,7 @@
 ## Code quality / package sanitation
 
 - [x] Split Streams and Rivers
+- [ ] Make sure all empty GETs return [], not null
 - [ ] Tighten up Convo REST API, add defered cleanups
 - [ ] Update README.md and CONTRIBUTING.md, clean up 0.0.1 TODO
 - [ ] Comment all exported functions, types, methods, and constants
