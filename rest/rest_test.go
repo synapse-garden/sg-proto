@@ -8,6 +8,7 @@ import (
 
 	"github.com/synapse-garden/sg-proto/admin"
 	"github.com/synapse-garden/sg-proto/auth"
+	"github.com/synapse-garden/sg-proto/convo"
 	"github.com/synapse-garden/sg-proto/incept"
 	"github.com/synapse-garden/sg-proto/store"
 	"github.com/synapse-garden/sg-proto/stream"
@@ -47,6 +48,9 @@ func (s *RESTSuite) SetUpTest(c *C) {
 			auth.ContextBucket,
 			stream.StreamBucket,
 			river.RiverBucket,
+			convo.ConvoBucket,
+			convo.MessageBucket,
+			convo.ScribeBucket,
 		),
 	)), IsNil)
 	s.db, s.tmpDir = db, tmpDir
