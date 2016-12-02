@@ -80,7 +80,7 @@ func GetAll(
 	user string,
 	filters ...stream.Filter,
 ) func(*bolt.Tx) ([]*Convo, error) {
-	var result []*Convo
+	result := []*Convo{}
 
 	defaultFilter := stream.MultiOr{
 		stream.ByOwner(user),
