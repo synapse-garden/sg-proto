@@ -44,7 +44,7 @@ func (c Convo) Bind(r *htr.Router) error {
 			return err
 		}
 		c.Pub, e = river.NewPub(ConvoNotifs, NotifStream, tx)
-		return nil
+		return
 	})
 	if err != nil {
 		return err
