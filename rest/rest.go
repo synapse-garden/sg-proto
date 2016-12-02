@@ -77,7 +77,7 @@ func Bind(
 		Profile{DB: db},
 		Notif{DB: db},
 		Stream{DB: db},
-		Convo{DB: db},
+		&Convo{DB: db},
 	} {
 		if err := api.Bind(htr); err != nil {
 			return nil, err

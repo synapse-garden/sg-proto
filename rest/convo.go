@@ -33,7 +33,7 @@ type Convo struct {
 }
 
 // Bind implements API.Bind on Convo.
-func (c Convo) Bind(r *htr.Router) error {
+func (c *Convo) Bind(r *htr.Router) error {
 	db := c.DB
 	if db == nil {
 		return errors.New("Convo DB handle must not be nil")
