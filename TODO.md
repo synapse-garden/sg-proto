@@ -166,9 +166,19 @@
 - [x] Stream Put does not require the user to own the Stream.
 - [x] Convo Put does not require the user to own the Convo.
 - [x] Convo Messages GET has incorrect range
-- [x] Convo delete notif uses stream delete
-- [ ] 404 on empty messages, should be populated on convo create
-      and deleted on convo delete.
+- [x] Convo delete notif should not use stream delete
+- [x] 404 on empty messages, should be populated on convo create.
+- [x] Convo Delete should hang up Scribe and users.
+- [x] Stream Delete should hang up users.
+- [x] Convo Delete should remove Scribe checkins bucket.
+- [x] Convo Delete should remove convo's messages bucket.
+- [x] Convo Delete should have correct auth error message on DELETE.
+- [x] Convo.Bind should never silently drop an error on NewPub.
+- [x] convo.Scribe.DeleteCheckins should not panic if the Checkins
+      bucket is missing; this is normal and means no checkins exist yet.
+- [ ] Diagnose occasional test failures in RiverSuite.TestNewBus
+- [ ] Convo / Stream PUT which removes users must also hang them up.
+- [ ] Potential races, e.g. on Convo DELETE with Surveys.
 - [ ] Better testing of REST resource security.
 - [ ] Deleting the user's profile doesn't close his Streams.
 - [ ] Surveyor / Respondent don't keep track of who's still alive.  If a
