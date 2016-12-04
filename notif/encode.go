@@ -28,7 +28,7 @@ func (json) Encode(r river.Pub, val store.Resourcer, t UserTopic) error {
 	}
 	boxBs, err := js.Marshal(store.ResourceBox{
 		Name:     val.Resource(),
-		Contents: bs,
+		Contents: string(bs),
 	})
 	if err != nil {
 		return err

@@ -12,5 +12,5 @@ type Resourcer interface {
 // Resource.
 type ResourceBox struct {
 	Name     Resource `json:"name"`
-	Contents []byte   `json:"contents"`
+	Contents string   `json:"contents"`
 }
