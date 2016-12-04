@@ -1,19 +1,23 @@
 package convo
 
-import (
-	"github.com/synapse-garden/sg-proto/store"
-	"github.com/synapse-garden/sg-proto/stream"
-)
+import "github.com/synapse-garden/sg-proto/store"
 
-// Connected is a Resourcer which can notify that a user has connected.
-type Connected stream.ConnectionNotif
+// ConnectionNotif is a base for convo Resourcers to create notifs.
+// Implement store.Resourcer as a method on an alias of ConnectionNotif.
+type ConnectionNotif struct {
+	UserID  string `json:"userID"`
+	ConvoID string `json:"convoID"`
+}
+
+// Connected is a ConnectionNotif for convo connection events
+type Connected ConnectionNotif
 
 // Resource implements Resourcer.Resource on Connected.
 func (Connected) Resource() store.Resource { return "convo-connected" }
 
 // Disconnected is a Resourcer which can notify that a user has
 // disconnected.
-type Disconnected stream.ConnectionNotif
+type Disconnected ConnectionNotif
 
 // Resource implements Resourcer.Resource on Disconnected.
 func (Disconnected) Resource() store.Resource { return "convo-disconnected" }
@@ -23,7 +27,7 @@ func (Disconnected) Resource() store.Resource { return "convo-disconnected" }
 func (c *Convo) Connected(user string) store.Resourcer {
 	return Connected{
 		UserID:   user,
-		StreamID: c.ID,
+		ConvoID: c.ID,
 	}
 }
 
@@ -32,11 +36,11 @@ func (c *Convo) Connected(user string) store.Resourcer {
 func (c *Convo) Disconnected(user string) store.Resourcer {
 	return Disconnected{
 		UserID:   user,
-		StreamID: c.ID,
+		ConvoID: c.ID,
 	}
 }
 
-// Deleteed is a Resourcer which can notify that the convo has been
+// Deleted is a Resourcer which can notify that the convo has been
 // deleted.
 type Deleted string
 
