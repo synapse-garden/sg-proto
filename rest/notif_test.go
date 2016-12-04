@@ -2,7 +2,6 @@ package rest_test
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"net/http/httptest"
 
 	"github.com/synapse-garden/sg-proto/auth"
@@ -85,10 +84,8 @@ func (s *RESTSuite) TestConnectNotifs(c *C) {
 	// correctly, but pub3 messages are not received since it wasn't
 	// connected to.
 	msg := new(store.ResourceBox)
-	expect1, err := json.Marshal(fooResourcer{})
-	c.Assert(err, IsNil)
-	expect2, err := json.Marshal(fooResourcer{X: 1})
-	c.Assert(err, IsNil)
+	expect1 := map[string]interface{}{"X":float64(0)}
+	expect2 := map[string]interface{}{"X":float64(1)}
 
 	c.Assert(notif.Encode(pub1, fooResourcer{}, notif.MakeUserTopic("bodie")), IsNil)
 	c.Check(ws.JSON.Receive(conn1, msg), IsNil)

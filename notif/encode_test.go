@@ -46,11 +46,9 @@ func (s *NotifSuite) TestDefaultEncoderEncode(c *C) {
 	err := notif.DefaultEncoder.Encode(t, v, top)
 	c.Assert(err, IsNil)
 
-	vbs, err := json.Marshal(v)
-	c.Assert(err, IsNil)
 	jsbs, err := json.Marshal(&store.ResourceBox{
 		Name:     v.Resource(),
-		Contents: vbs,
+		Contents: v,
 	})
 	c.Assert(err, IsNil)
 

@@ -22,13 +22,9 @@ var DefaultEncoder = json{}
 
 // Encode implements Encoder on json for DefaultEncoder.
 func (json) Encode(r river.Pub, val store.Resourcer, t UserTopic) error {
-	bs, err := js.Marshal(val)
-	if err != nil {
-		return err
-	}
 	boxBs, err := js.Marshal(store.ResourceBox{
 		Name:     val.Resource(),
-		Contents: string(bs),
+		Contents: val,
 	})
 	if err != nil {
 		return err

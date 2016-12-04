@@ -11,6 +11,6 @@ type Resourcer interface {
 // ResourceBox is a container for the bytes and type of some encoded
 // Resource.
 type ResourceBox struct {
-	Name     Resource `json:"name"`
-	Contents string   `json:"contents"`
+	Name     Resource    `json:"name"`
+	Contents interface{} `json:"contents"`
 }
