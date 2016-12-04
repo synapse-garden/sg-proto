@@ -675,19 +675,20 @@ hangupReaders:
 		err = river.MakeSurvey(surv, river.HUP, river.OK)
 		if err != nil {
 			http.Error(w, errors.Wrapf(err,
-				"failed to make hangup survey",
+				"failed to hang up connected convo users",
 			).Error(), http.StatusInternalServerError)
 			return
 		}
 	}
 
-	// After hanging up the users, the Scribe must also be cleaned up.
-	scr := convo.Scribe(id)
-	err = c.Update(scr.DeleteCheckins)
+	// After hanging up the users, must clean up the checkins.
+	err = c.Update(convo.Scribe(id).DeleteCheckins)
 	switch {
 	case store.IsMissingBucket(err):
-		// Nobody has checked in to the convo yet.  Do nothing.
+		// Nobody has checked in to the convo yet.  Nothing to
+		// do here, since there is no Scribe yet.
 	case err != nil:
+		// Something went wrong trying to clean up checkins.
 		http.Error(w,
 			"failed to clean up convo scribe",
 			http.StatusInternalServerError)
@@ -696,22 +697,8 @@ hangupReaders:
 		).Error())
 	}
 
-	err = scr.Hangup(c.DB)
-	switch {
-	case river.IsStreamMissing(err):
-		// Nobody has created a Hangup river yet!
-		// Nothing to do here.
-	case err != nil:
-		http.Error(w,
-			"failed to hang up convo scribe",
-			http.StatusInternalServerError)
-		log.Fatal(errors.Wrap(err,
-			"failed to hangup Scribe",
-		).Error())
-	}
-
-	// If everything else worked, now it's time to delete the Convo
-	// and its messages.
+	// If everything worked, now it's time to delete the Convo and
+	// its messages.
 	if err := c.Update(store.Wrap(
 		convo.Delete([]byte(id)),
 		convo.DeleteMessages(id),
