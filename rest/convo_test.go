@@ -2,18 +2,23 @@ package rest_test
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	htt "net/http/httptest"
 
 	"github.com/synapse-garden/sg-proto/auth"
 	"github.com/synapse-garden/sg-proto/convo"
 	"github.com/synapse-garden/sg-proto/rest"
+	"github.com/synapse-garden/sg-proto/stream"
 	"github.com/synapse-garden/sg-proto/stream/river"
 	sgt "github.com/synapse-garden/sg-proto/testing"
 
 	"github.com/boltdb/bolt"
 	"github.com/julienschmidt/httprouter"
+	uuid "github.com/satori/go.uuid"
+	ws "golang.org/x/net/websocket"
 	. "gopkg.in/check.v1"
 )
 
@@ -97,6 +102,122 @@ func (s *RESTSuite) TestConvoCreate(c *C) {
 	), IsNil)
 
 	cleanupConvoAPI(c, api)
+}
+
+func (s *RESTSuite) TestConvoPut(c *C) {
+	r := httprouter.New()
+	api := rest.Convo{DB: s.db}
+	srv, tokens := prepConvoAPI(c, r, &api, "bodie", "bob", "jim")
+	defer srv.Close()
+
+	conv := &convo.Convo{
+		Owner:   "bodie",
+		Readers: map[string]bool{"bodie": true, "bob": true},
+		Writers: map[string]bool{"bodie": true, "bob": true},
+	}
+
+	c.Log("POST the new Convo to Create it.")
+	send, err := json.Marshal(conv)
+	c.Assert(err, IsNil)
+
+	req := htt.NewRequest("POST", "/convos", bytes.NewBuffer(send))
+	req.Header = sgt.Bearer(tokens["bodie"])
+	w := htt.NewRecorder()
+	r.ServeHTTP(w, req)
+	c.Check(w.Code, Equals, http.StatusOK)
+
+	got := new(convo.Convo)
+	c.Assert(json.Unmarshal(w.Body.Bytes(), got), IsNil)
+	c.Check(got.Owner, Equals, conv.Owner)
+	c.Check(got.Writers, DeepEquals, conv.Writers)
+	c.Check(got.Readers, DeepEquals, conv.Readers)
+
+	newConv := *got
+	newConv.Writers = map[string]bool{
+		"bodie": true,
+		"bob":   true,
+		"jim":   true,
+	}
+
+	c.Log("An unauthorized user cannot PUT the convo.")
+	c.Assert(sgt.ExpectResponse(r,
+		"/convos/"+got.ID, "PUT",
+		newConv, "", "user `bob` does not own Convo `"+got.ID+"`\n",
+		http.StatusUnauthorized,
+		sgt.Bearer(tokens["bob"]),
+	), IsNil)
+
+	c.Log("An authorized user can PUT the convo.")
+	into := new(convo.Convo)
+	c.Assert(sgt.ExpectResponse(r,
+		"/convos/"+got.ID, "PUT",
+		newConv, into, &newConv,
+		http.StatusOK,
+		sgt.Bearer(tokens["bodie"]),
+	), IsNil)
+
+	c.Log("A nonexistent user cannot be added to a Convo using a PUT.")
+	newConv.Readers = map[string]bool{"bodie": true, "jimbles": true}
+	c.Assert(sgt.ExpectResponse(r,
+		"/convos/"+got.ID, "PUT",
+		newConv, "", "invalid Convo: user `jimbles` not found\n",
+		http.StatusNotFound,
+		sgt.Bearer(tokens["bodie"]),
+	), IsNil)
+
+	c.Log("A nonexistent Convo cannot be PUT.")
+	newConv.Readers = map[string]bool{"bodie": true, "bob": true}
+	someID := uuid.NewV4().String()
+	c.Assert(sgt.ExpectResponse(r,
+		"/convos/"+someID, "PUT",
+		newConv, "", "invalid Convo: no such convo `"+someID+"`\n",
+		http.StatusNotFound,
+		sgt.Bearer(tokens["bodie"]),
+	), IsNil)
+
+	connBodie, err := sgt.GetWSClient(
+		base64.RawURLEncoding.EncodeToString(tokens["bodie"]),
+		srv.URL+"/convos/"+got.ID+"/start",
+	)
+	c.Assert(err, IsNil)
+	connBob, err := sgt.GetWSClient(
+		base64.RawURLEncoding.EncodeToString(tokens["bob"]),
+		srv.URL+"/convos/"+got.ID+"/start",
+	)
+	c.Assert(err, IsNil)
+	connJim, err := sgt.GetWSClient(
+		base64.RawURLEncoding.EncodeToString(tokens["jim"]),
+		srv.URL+"/convos/"+got.ID+"/start",
+	)
+	c.Assert(err, IsNil)
+
+	c.Log("If someone updates the convo so Bob is removed, his " +
+		"websocket will be closed.")
+	newConv.Readers = map[string]bool{"bodie": true, "jim": true}
+	newConv.Writers = map[string]bool{"bodie": true, "jim": true}
+	into = new(convo.Convo)
+	c.Assert(sgt.ExpectResponse(r,
+		"/convos/"+got.ID, "PUT",
+		newConv, into, &newConv,
+		http.StatusOK,
+		sgt.Bearer(tokens["bodie"]),
+	), IsNil)
+
+	c.Log("Bob's Bus river is hung up now.")
+	bs, err := ioutil.ReadAll(connBob)
+	c.Assert(err, IsNil) // ReadAll EOF => nil error
+	c.Check(string(bs), Equals, "stream hung up: EOF")
+
+	c.Log("Jim and Bodie can still use the Bus river.")
+	c.Assert(ws.JSON.Send(connJim, stream.Message{Content: "hello"}), IsNil)
+	msgGot := new(convo.Message)
+	c.Assert(ws.JSON.Receive(connBodie, msgGot), IsNil)
+	c.Check(msgGot.Sender, Equals, "jim")
+
+	c.Assert(ws.JSON.Send(connBodie, stream.Message{Content: "hello"}), IsNil)
+	msgGot = new(convo.Message)
+	c.Assert(ws.JSON.Receive(connJim, msgGot), IsNil)
+	c.Check(msgGot.Sender, Equals, "bodie")
 }
 
 func (s *RESTSuite) TestConvoDelete(c *C) {

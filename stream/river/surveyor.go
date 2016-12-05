@@ -17,6 +17,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+// DefaultTimeout is the default timeout for Surveys.
+var DefaultTimeout = 30 * time.Millisecond
+
 // MakeSurvey sends the given Survey to all connected Responders and
 // awaits the expected Response, suffixed with binary.LittleEndian
 // uint64 ID.  It retries as necessary up to three times, keeping track

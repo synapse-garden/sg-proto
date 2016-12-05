@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/synapse-garden/sg-proto/convo"
 	"github.com/synapse-garden/sg-proto/notif"
@@ -281,7 +280,7 @@ func (c Convo) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	for u := range conv.Readers {
 		err = notif.Encode(c.Pub, conv.Disconnected(userID), notif.MakeUserTopic(u))
 		if err != nil {
-			log.Printf("failed to notify user %q of stream join", u)
+			log.Printf("failed to notify user %q of stream leave", u)
 		}
 	}
 }
@@ -465,7 +464,7 @@ func (c Convo) Put(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		users.CheckUsersExist(allUsers...),
 	))
 	if err != nil {
-		msg := errors.Wrap(err, "failed to check new Convo").Error()
+		msg := errors.Wrap(err, "invalid Convo").Error()
 		var code int
 		switch {
 		case users.IsMissing(err), convo.IsMissing(err):
@@ -490,13 +489,62 @@ func (c Convo) Put(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		return
 	case existing.Owner != userID:
 		http.Error(w, fmt.Sprintf(
-			"user %q does not own Convo %q",
+			"user %#q does not own Convo %#q",
 			userID, id,
 		), http.StatusUnauthorized)
 		return
 	}
 
-	// TODO: FIXME: Hang up removed read / write users
+	// Go through the old Readers.  If that user wasn't in the new
+	// users map, it gets inserted as a false value.
+	for r := range existing.Readers {
+		ok := updateUsers[r]
+		updateUsers[r] = ok
+	}
+
+	// Hang up Convo users.  If this fails, don't delete the convo.
+	// The owner can retry the delete.
+	var surv river.Surveyor
+hangupRemoved:
+	for u, ok := range updateUsers {
+		if !ok {
+			// Run a survey to hang up this user
+			err = c.View(func(tx *bolt.Tx) (e error) {
+				surv, e = river.NewSurvey(tx,
+					river.DefaultTimeout,
+					river.HangupBucket,
+					store.Bucket(id),
+					store.Bucket(u),
+				)
+				return
+			})
+			switch {
+			case river.IsStreamMissing(err):
+				// No "hangups" bucket yet.  No problem.
+				break hangupRemoved
+			case err != nil:
+				http.Error(w, errors.Wrapf(
+					err,
+					"failed to hang up convo user %#q",
+					userID,
+				).Error(), http.StatusInternalServerError)
+				log.Printf("failed to hang up convo user %#q", userID)
+				return
+			}
+
+			// NOTE: The Survey is used OUTSIDE of the Update.
+			//       Otherwise, a lethal deadlock will occur.
+			err = river.MakeSurvey(surv, river.HUP, river.OK)
+			if err != nil {
+				http.Error(w, errors.Wrapf(err,
+					"failed to hang up connected convo users",
+				).Error(), http.StatusInternalServerError)
+				return
+			}
+
+		}
+	}
+
 	err = c.Update(store.Wrap(
 		convo.CheckExists(id),
 		users.CheckUsersExist(allUsers...),
@@ -524,20 +572,14 @@ func (c Convo) Put(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		return
 	}
 
-	// Go through the old Readers.  If that user wasn't in the new
-	// users map, it gets inserted as a false value.
-	for r := range existing.Readers {
-		ok := updateUsers[r]
-		updateUsers[r] = ok
-	}
-
-	// Notify convo members that they have been added or removed.
+	// After the convo has been deleted and the DELETE response has
+	// gone through, notify users of being removed.
 	for u, ok := range updateUsers {
 		topic := notif.MakeUserTopic(u)
 		if ok {
 			err = notif.Encode(c.Pub, str, topic)
 		} else {
-			err = notif.Encode(c.Pub, stream.Removed(str.ID), topic)
+			err = notif.Encode(c.Pub, stream.Removed(id), topic)
 		}
 		if err != nil {
 			log.Printf("failed to notify user %q of convo update", u)
@@ -650,9 +692,9 @@ func (c Convo) Delete(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 hangupReaders:
 	for user := range existing.Readers {
 		// Hang up each Reader in the Convo.
-		err = c.Update(func(tx *bolt.Tx) (e error) {
+		err = c.View(func(tx *bolt.Tx) (e error) {
 			surv, e = river.NewSurvey(tx,
-				30*time.Millisecond,
+				river.DefaultTimeout,
 				river.HangupBucket,
 				store.Bucket(id),
 				store.Bucket(user),
@@ -668,6 +710,7 @@ hangupReaders:
 			http.Error(w, errors.Wrapf(err,
 				"failed to create hangup surveyor",
 			).Error(), http.StatusInternalServerError)
+			log.Printf("failed to hang up convo user %#q", userID)
 			return
 		}
 		// NOTE: The Survey is used OUTSIDE of the Update.
