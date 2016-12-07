@@ -10,6 +10,13 @@
 			"tree": true
 		},
 		{
+			"checksumSHA1": "Lps/+JqMRVlrXgO/+cazYcfsglg=",
+			"path": "github.com/davecgh/go-spew/spew",
+			"revision": "346938d642f2ec3594ed81d874461961cd0faa76",
+			"revisionTime": "2016-10-29T20:57:26Z",
+			"tree": true
+		},
+		{
 			"checksumSHA1": "ztypj7pDqHM1CVbBfHcPRp1n+bI=",
 			"path": "github.com/droundy/goopt",
 			"revision": "e5c9ab183a102ef3ad2363b04483784258984157",
