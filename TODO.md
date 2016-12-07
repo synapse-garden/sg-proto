@@ -181,9 +181,9 @@
 - [x] Empty GET on /convos should return [], not null
 - [x] Notifs arrive with contents base64-encoded
 - [x] Fatal race in convo Scribe hangup on DELETE
-- [ ] Old Bus buckets should be deleted after the convo or stream is deleted.o
+- [x] Convo / Stream PUT which removes users must also hang them up.
+- [ ] Old Bus buckets should be deleted after the convo or stream is deleted.
 - [ ] Diagnose occasional test failures in RiverSuite.TestNewBus
-- [ ] Convo / Stream PUT which removes users must also hang them up.
 - [ ] Potential races, e.g. on Convo DELETE with Surveys.
 - [ ] Better testing of REST resource security.
 - [ ] Deleting the user's profile doesn't close his Streams.
