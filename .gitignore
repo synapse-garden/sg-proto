@@ -11,6 +11,7 @@ cover.out
 
 # Compiled binaries
 debug
+debug.test
 *.exe
 
 # SG Server files
