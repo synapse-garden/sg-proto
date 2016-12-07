@@ -8,6 +8,7 @@ import (
 	htt "net/http/httptest"
 	"reflect"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 	"github.com/synapse-garden/sg-proto/auth"
 )
@@ -54,7 +55,7 @@ func ExpectResponse(
 	if c := w.Code; c != code {
 		return errors.Errorf(
 			"unexpected response code %d with body %#q",
-			c, w.Body,
+			c, spew.Sdump(w.Body),
 		)
 	}
 
@@ -66,7 +67,10 @@ func ExpectResponse(
 		switch tExp := bodyExpect.(type) {
 		case string:
 			if tExp != string(bbs) {
-				return errors.Errorf("%#q expected, but got response %#q", bodyExpect, bbs)
+				return errors.Errorf(
+					"%#q expected, but got response %#q",
+					tExp, bbs,
+				)
 			}
 			return nil
 		default:
@@ -78,8 +82,9 @@ func ExpectResponse(
 	case nil:
 		if !reflect.DeepEqual(into, bodyExpect) {
 			return errors.Errorf(
-				"expected response %#v, got response %#v",
-				bodyExpect, into,
+				"expected response %s, got response %s",
+				spew.Sdump(bodyExpect),
+				spew.Sdump(into),
 			)
 		}
 		return nil
