@@ -185,6 +185,7 @@
 - [x] Race / 500 on convo websocket close / convo delete.
 - [x] Race in Convo PUT due to hangup
 - [x] Race in Scribe hangup / Convo Delete.
+- [x] scribe DeleteCheckins fails if the Scribe had no checkins.
 - [ ] Old Bus buckets should be deleted after the convo or stream is deleted.
 - [ ] Diagnose occasional test failures in RiverSuite.TestNewBus
 - [ ] Better testing of REST resource security.

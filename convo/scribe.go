@@ -113,7 +113,11 @@ func (s Scribe) DeleteCheckins(tx *bolt.Tx) error {
 	if err != nil {
 		return err
 	}
-	return b.DeleteBucket([]byte(s))
+	bs := []byte(s)
+	if b.Bucket(bs) != nil {
+		return b.DeleteBucket(bs)
+	}
+	return nil
 }
 
 // Spawn is a Bolt Update function which creates a new Scribe Bus,
