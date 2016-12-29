@@ -67,6 +67,7 @@
 	- [ ] API pub river publishes to GUID subscribers, GUIDs publish to
 	      their subscribers (???)
 	- [ ] Clarify this API / sketch up some tests
+- [ ] Refactor websocket Connect REST methods into nested testable steps
 
 # v0.1.0
 
@@ -86,16 +87,25 @@
 - [ ] Expose endpoints without sessions?
 - [ ] Default superuser logins given?
 
+## Errors
+
+- [ ] An interface is provided for API-serializable errors
+- [ ] An interface is provided for non-lethal errors
+  - [ ] IsLethal
+  - [ ] Stop returning bools from websocket Conn reader
+
 ## Unorganized
+
+- [ ] Organize TODOs
 
 - [x] The design of Rivers must support a future implementation which
       permits the API to use req/rep Rivers to control the behavior of
 	  receivers.
 - [x] Reorganize streams package with more abstraction
 - [x] Standardize on JSON camelCase vs snake_case etc
-
-- [ ] Organize TODOs
-
+- [ ] All the database backend stuff is a spaghettified nightmare since
+      each package manages its own database behaviors.
+- [ ] Tighten down and offer Streams as a CLI option.
 - [ ] Remove self from stream / convo if you don't want to be in it,
       even if you don't own it.
 - [ ] Redesign streams / hangup event chains
@@ -271,6 +281,7 @@
 - [x] User is notified when added to a Stream
 - [x] Stream members are notified when a user connects to a Stream
 - [x] Stream members are notified when a user leaves a Stream
+- [ ] Delete meta buckets on Convo close.
 - [ ] Close running stream from API (use Survey/Resp)
 - [ ] Removing a user from a Stream hangs up the user's Stream bindings
 - [ ] Use https://golang.org/pkg/net/http/httptrace/ for REST test
@@ -328,10 +339,10 @@
 - [x] Unregister reader on close
 
 - [ ] Filters on GET
-  - [ ] Sender
-  - [ ] Date
-  - [ ] Max
-  - [ ] Paginate
+  - [ ] Sender: &sender=<userID str>
+  - [ ] Date: &begin=<RFC3999>, &end=<RFC3999>
+  - [ ] Max: &num=<int>
+  - [ ] Paginate: &per_page=<int>, &page=<int>
   - [ ] Filter by max messages
     - [x] Default to last 50
 - [x] Notify user when someone creates a convo with them
