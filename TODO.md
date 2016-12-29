@@ -182,13 +182,16 @@
 - [x] Notifs arrive with contents base64-encoded
 - [x] Fatal race in convo Scribe hangup on DELETE
 - [x] Convo / Stream PUT which removes users must also hang them up.
+- [x] Race / 500 on convo websocket close / convo delete.
+- [x] Race in Convo PUT due to hangup
+- [x] Race in Scribe hangup / Convo Delete.
 - [ ] Old Bus buckets should be deleted after the convo or stream is deleted.
 - [ ] Diagnose occasional test failures in RiverSuite.TestNewBus
-- [ ] Potential races, e.g. on Convo DELETE with Surveys.
 - [ ] Better testing of REST resource security.
 - [ ] Deleting the user's profile doesn't close his Streams.
-- [ ] Surveyor / Respondent don't keep track of who's still alive.  If a
+- [o] Surveyor / Respondent don't keep track of who's still alive.  If a
       Responder removes itself from its bucket, the Survey will fail.
+  - STATUS: "Solved" by post-check if some didn't respond.
 - [ ] If a survey has a problem, responders are in an unknown state.
 - [ ] Refresh tokens must be concatenated to auth tokens in header
 - [ ] Refresh tokens must not zombify expired auth tokens, instead
