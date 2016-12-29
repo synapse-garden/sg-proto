@@ -218,6 +218,8 @@ func (s *RESTSuite) TestConvoPut(c *C) {
 	msgGot = new(convo.Message)
 	c.Assert(ws.JSON.Receive(connJim, msgGot), IsNil)
 	c.Check(msgGot.Sender, Equals, "bodie")
+
+	cleanupConvoAPI(c, api)
 }
 
 func (s *RESTSuite) TestConvoDelete(c *C) {
@@ -297,3 +299,72 @@ func (s *RESTSuite) TestConvoDelete(c *C) {
 //  chrono order?
 // user has chats
 //
+
+func (s *RESTSuite) TestConvoHangupWhileDelete(c *C) {
+	// This test identifies a 500 occasionally returned on convo
+	// delete when the websocket is also being hung up.
+	r := httprouter.New()
+	api := rest.Convo{DB: s.db}
+	srv, tokens := prepConvoAPI(c, r, &api, "bodie")
+	defer srv.Close()
+
+	conv := &convo.Convo{
+		Owner:   "bodie",
+		Readers: map[string]bool{"bodie": true},
+		Writers: map[string]bool{"bodie": true},
+	}
+
+	// POST the new Convo to Create it.
+	send, err := json.Marshal(conv)
+	c.Assert(err, IsNil)
+
+	req := htt.NewRequest("POST", "/convos", bytes.NewBuffer(send))
+	req.Header = sgt.Bearer(tokens["bodie"])
+	w := htt.NewRecorder()
+	r.ServeHTTP(w, req)
+	c.Check(w.Code, Equals, http.StatusOK)
+
+	got := new(convo.Convo)
+	c.Assert(json.Unmarshal(w.Body.Bytes(), got), IsNil)
+	c.Check(got.Owner, Equals, conv.Owner)
+	c.Check(got.Writers, DeepEquals, conv.Writers)
+	c.Check(got.Readers, DeepEquals, conv.Readers)
+
+	// Get two websocket connections.
+	conn1, err := sgt.GetWSClient(
+		base64.RawURLEncoding.EncodeToString(tokens["bodie"]),
+		srv.URL+"/convos/"+got.ID+"/start",
+	)
+	c.Assert(err, IsNil)
+	conn2, err := sgt.GetWSClient(
+		base64.RawURLEncoding.EncodeToString(tokens["bodie"]),
+		srv.URL+"/convos/"+got.ID+"/start",
+	)
+	c.Assert(err, IsNil)
+
+	// Make sure sending and receiving works for both.
+	c.Assert(ws.JSON.Send(conn1, stream.Message{Content: "hello"}), IsNil)
+	msgGot := new(convo.Message)
+	c.Assert(ws.JSON.Receive(conn2, msgGot), IsNil)
+	c.Check(msgGot.Sender, Equals, "bodie")
+
+	c.Assert(ws.JSON.Send(conn2, stream.Message{Content: "hello"}), IsNil)
+	msgGot = new(convo.Message)
+	c.Assert(ws.JSON.Receive(conn1, msgGot), IsNil)
+	c.Check(msgGot.Sender, Equals, "bodie")
+
+	// Deleting the Convo while a websocket is closing is not a
+	// problem.
+	c.Assert(conn2.Close(), IsNil)
+	c.Assert(sgt.ExpectResponse(r,
+		"/convos/"+got.ID, "DELETE",
+		nil, "", "",
+		http.StatusOK,
+		sgt.Bearer(tokens["bodie"]),
+	), IsNil)
+
+	// Closing the other one is fine too.
+	c.Assert(conn1.Close(), IsNil)
+
+	cleanupConvoAPI(c, api)
+}

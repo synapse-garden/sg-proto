@@ -221,8 +221,8 @@ func (c Convo) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	})
 	switch {
 	case store.IsMissingBucket(err):
-		// The checkout was already removed -- probably the convo
-		// was deleted.  Nothing to do here.
+		// The checkout was already removed -- probably the
+		// convo was deleted.  Nothing to do here.
 	case err != nil:
 		log.Fatal(errors.Wrap(err,
 			"failed to check out of convo",
@@ -230,9 +230,22 @@ func (c Convo) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	}
 	if last {
 		if err := scr.Hangup(c.DB); err != nil {
-			log.Fatal(errors.Wrap(err,
-				"failed to hangup Scribe",
-			).Error())
+			switch err := err.(type) {
+			case river.Missing:
+				errView := c.View(river.CheckMissing(
+					convo.ScribeBucket,
+					store.Bucket(scr),
+				))
+				if errView != nil {
+					log.Fatal(errors.Wrap(errView,
+						"failed to hangup Scribe",
+					).Error())
+				}
+			default:
+				log.Fatal(errors.Wrap(err,
+					"failed to hangup Scribe",
+				).Error())
+			}
 		}
 	}
 
@@ -508,7 +521,8 @@ func (c Convo) Put(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 hangupRemoved:
 	for u, ok := range updateUsers {
 		if !ok {
-			// Run a survey to hang up this user
+			// If the user was removed, run a survey to hang
+			// up the user.
 			err = c.View(func(tx *bolt.Tx) (e error) {
 				surv, e = river.NewSurvey(tx,
 					river.DefaultTimeout,
@@ -536,12 +550,29 @@ hangupRemoved:
 			//       Otherwise, a lethal deadlock will occur.
 			err = river.MakeSurvey(surv, river.HUP, river.OK)
 			if err != nil {
-				http.Error(w, errors.Wrapf(err,
-					"failed to hang up connected convo users",
-				).Error(), http.StatusInternalServerError)
-				return
+				// Maybe some were already removed.
+				switch err := err.(type) {
+				case river.Missing:
+					errView := c.View(river.CheckMissing(
+						river.HangupBucket,
+						store.Bucket(id),
+						store.Bucket(u),
+					))
+					msg := "failed to hang up " +
+						"connected convo users"
+					if errView != nil {
+						http.Error(w, errors.Wrapf(
+							errView, msg,
+						).Error(), http.StatusInternalServerError)
+						return
+					}
+				default:
+					http.Error(w, errors.Wrapf(err,
+						"failed to hang up connected convo users",
+					).Error(), http.StatusInternalServerError)
+					return
+				}
 			}
-
 		}
 	}
 
@@ -713,14 +744,36 @@ hangupReaders:
 			log.Printf("failed to hang up convo user %#q", userID)
 			return
 		}
+
 		// NOTE: The Survey is used OUTSIDE of the Update.
 		//       Otherwise, a lethal deadlock will occur.
 		err = river.MakeSurvey(surv, river.HUP, river.OK)
 		if err != nil {
-			http.Error(w, errors.Wrapf(err,
-				"failed to hang up connected convo users",
-			).Error(), http.StatusInternalServerError)
-			return
+			switch err := err.(type) {
+			case river.Missing:
+				// Maybe they were removed already.
+				errView := c.View(river.CheckMissing(
+					river.HangupBucket,
+					store.Bucket(id),
+					store.Bucket(user),
+				))
+				if errView != nil {
+					http.Error(w, errors.Wrapf(errView,
+						"failed to hang up "+
+							"connected "+
+							"convo users"+
+							"after some did "+
+							"not respond",
+					).Error(), http.StatusInternalServerError)
+					return
+				}
+			default:
+				http.Error(w, errors.Wrapf(err,
+					"failed to hang up connected "+
+						"convo users",
+				).Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 	}
 
@@ -745,6 +798,7 @@ hangupReaders:
 	if err := c.Update(store.Wrap(
 		convo.Delete([]byte(id)),
 		convo.DeleteMessages(id),
+		// TODO: Delete meta buckets, such as Hangups.
 	)); err != nil {
 		http.Error(w, fmt.Sprintf(
 			"failed to delete convo %#q: %s",
