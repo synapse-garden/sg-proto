@@ -18,6 +18,8 @@ func MakeStreamExistsErr(id []byte) error {
 	return errStreamExists(id)
 }
 
+func MakeMissing(ids []uint64) missing { return missing(ids) }
+
 func MakeSub(r Sub, ts ...Topic) sub {
 	if len(ts) == 0 {
 		ts = []Topic{Global}

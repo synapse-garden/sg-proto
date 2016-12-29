@@ -20,6 +20,7 @@ type testResponder struct {
 func (t testResponder) ID() uint64 { return t.id }
 
 var _ = river.Responder(testResponder{})
+var _ = river.Missing(river.MakeMissing([]uint64{0, 1, 2}))
 
 const retryTime = 10 * time.Millisecond
 

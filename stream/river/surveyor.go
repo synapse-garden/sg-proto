@@ -24,6 +24,8 @@ var DefaultTimeout = 30 * time.Millisecond
 // awaits the expected Response, suffixed with binary.LittleEndian
 // uint64 ID.  It retries as necessary up to three times, keeping track
 // of the seen IDs of respondents.
+//
+// If some Responders don't respond, the error returned will be Missing.
 func MakeSurvey(s Surveyor, what Survey, expect Response) error {
 	var (
 		seen       = make(map[uint64]bool)
@@ -105,14 +107,14 @@ func MakeSurvey(s Surveyor, what Survey, expect Response) error {
 		}
 	}
 
-	var unseen []uint64
+	var unseen missing
 	for k := range expectSeen {
 		if !seen[k] {
 			unseen = append(unseen, k)
 		}
 	}
 
-	return errors.Errorf("no response from client(s): %+v", unseen)
+	return unseen
 }
 
 // Surveyor is a River which implements the Surveyor end of the
