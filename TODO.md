@@ -315,8 +315,8 @@
 ## Chat
 
 - [x] Convos are Streams with a REST interface
-- [ ] Convo websocket interactions are well-tested
-- [ ] Removing a user from a convo hangs up their convos
+- [x] Convo websocket interactions are well-tested
+- [x] Removing a user from a convo hangs up their convos
 - [x] Everything is identical to Bus rivers but:
   - [x] convos have their own bucket
   - [x] the SocketReader wraps messages with username and timestamp
@@ -351,8 +351,8 @@
 - [x] Notify user when they are removed from convo
 - [x] Notify user when someone connects to convo
 - [x] Notify user when someone leaves convo
-- [ ] Handle errors sanely
-- [ ] Test what happens when one or more users hang up, etc
+- [x] Handle errors sanely
+- [x] Test what happens when one or more users hang up, etc
 
 ## Todo
 
