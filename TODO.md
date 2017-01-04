@@ -98,6 +98,7 @@
 
 - [ ] Organize TODOs
 
+- [ ] "Resource" interface to make CRUD much, much simpler
 - [x] The design of Rivers must support a future implementation which
       permits the API to use req/rep Rivers to control the behavior of
 	  receivers.
@@ -328,7 +329,7 @@
 		  hung up by last person to leave
   - [ ] Convo connections time out when inactive for a while (15 min?)
 
-- [ ] GET /convos/<id>/messages?start/end/etc
+- [ ] GET /convos/<id>/messages? ( start/end/etc )
   - [ ] More filters
 
 - [x] Chat between two or more users (on top of streams API)
