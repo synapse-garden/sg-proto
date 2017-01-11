@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/boltdb/bolt"
+	"github.com/pkg/errors"
 )
 
 func Put(b Bucket, key, val []byte) func(*bolt.Tx) error {
@@ -25,6 +26,16 @@ func Get(b Bucket, key []byte) func(*bolt.Tx) ([]byte, error) {
 			return []byte{}, nil
 		}
 		return result[:], nil
+	}
+}
+
+func Error(err error) func(*bolt.Tx) error {
+	return func(*bolt.Tx) error { return err }
+}
+
+func Errorf(fmt string, vs ...interface{}) func(*bolt.Tx) error {
+	return func(*bolt.Tx) error {
+		return errors.Errorf(fmt, vs...)
 	}
 }
 
