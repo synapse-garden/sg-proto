@@ -3,18 +3,14 @@ package stream_test
 import (
 	"github.com/synapse-garden/sg-proto/store"
 	"github.com/synapse-garden/sg-proto/stream"
+	"github.com/synapse-garden/sg-proto/users"
 
 	"github.com/boltdb/bolt"
 	. "gopkg.in/check.v1"
 )
 
-var (
-	_ = stream.Filter(stream.ByOwner(""))
-	_ = stream.Filter(stream.ByReader(""))
-
-	_ = store.Resourcer(stream.Stream{})
-	_ = store.Resourcer(&stream.Stream{})
-)
+var _ = store.Resourcer(stream.Stream{})
+var _ = store.Resourcer(&stream.Stream{})
 
 func checkStreamMatch(
 	c *C,
@@ -34,10 +30,13 @@ func (s *StreamSuite) TestCheckNotExist(c *C) {
 	c.Check(s.db.View(stream.CheckNotExist("x")), IsNil)
 
 	c.Assert(s.db.Update(stream.Upsert(&stream.Stream{
-		ID:      "x",
-		Owner:   "bob",
-		Readers: map[string]bool{"bob": true, "bart": true},
-		Writers: map[string]bool{"bob": true, "bart": true},
+		Group: users.Group{
+			Owner:   "bob",
+			Readers: map[string]bool{"bob": true, "bart": true},
+			Writers: map[string]bool{"bob": true, "bart": true},
+		},
+
+		ID: "x",
 	})), IsNil)
 
 	err := s.db.View(stream.CheckNotExist("x"))
@@ -47,10 +46,12 @@ func (s *StreamSuite) TestCheckNotExist(c *C) {
 
 func (s *StreamSuite) TestGet(c *C) {
 	given := &stream.Stream{
-		ID:      "x",
-		Owner:   "bob",
-		Readers: map[string]bool{"bob": true, "bart": true},
-		Writers: map[string]bool{"bob": true, "bart": true},
+		Group: users.Group{
+			Owner:   "bob",
+			Readers: map[string]bool{"bob": true, "bart": true},
+			Writers: map[string]bool{"bob": true, "bart": true},
+		},
+		ID: "x",
 	}
 	c.Assert(s.db.Update(stream.Upsert(given)), IsNil)
 
@@ -64,16 +65,22 @@ func (s *StreamSuite) TestGet(c *C) {
 
 func (s *StreamSuite) TestUpsert(c *C) {
 	given := &stream.Stream{
-		ID:      "x",
-		Owner:   "bob",
-		Readers: map[string]bool{"bob": true, "bart": true},
-		Writers: map[string]bool{"bob": true, "bart": true},
+		Group: users.Group{
+			Owner:   "bob",
+			Readers: map[string]bool{"bob": true, "bart": true},
+			Writers: map[string]bool{"bob": true, "bart": true},
+		},
+
+		ID: "x",
 	}
 	next := &stream.Stream{
-		ID:      "x",
-		Owner:   "zed",
-		Readers: map[string]bool{"bob": true, "bart": true},
-		Writers: map[string]bool{"bob": true, "bart": true},
+		Group: users.Group{
+			Owner:   "zed",
+			Readers: map[string]bool{"bob": true, "bart": true},
+			Writers: map[string]bool{"bob": true, "bart": true},
+		},
+
+		ID: "x",
 	}
 	c.Assert(s.db.Update(stream.Upsert(given)), IsNil)
 	c.Assert(s.db.Update(stream.Upsert(next)), IsNil)
@@ -83,10 +90,13 @@ func (s *StreamSuite) TestUpsert(c *C) {
 
 func (s *StreamSuite) TestDelete(c *C) {
 	given := &stream.Stream{
-		ID:      "x",
-		Owner:   "bob",
-		Readers: map[string]bool{"bob": true, "bart": true},
-		Writers: map[string]bool{"bob": true, "bart": true},
+		Group: users.Group{
+			Owner:   "bob",
+			Readers: map[string]bool{"bob": true, "bart": true},
+			Writers: map[string]bool{"bob": true, "bart": true},
+		},
+
+		ID: "x",
 	}
 	c.Assert(s.db.Update(stream.Upsert(given)), IsNil)
 	checkStreamMatch(c, s.db, "x", given)
@@ -98,29 +108,35 @@ func (s *StreamSuite) TestDelete(c *C) {
 
 func (s *StreamSuite) TestGetAll(c *C) {
 	var given = []*stream.Stream{
-		{ID: "x0", Owner: "bob"},
-		{ID: "x1", Owner: "bob",
+		{ID: "x0", Group: users.Group{Owner: "bob"}},
+		{ID: "x1", Group: users.Group{
+			Owner:   "bob",
 			Readers: map[string]bool{"john": true},
-		}, {ID: "x2", Owner: "bob",
+		}}, {ID: "x2", Group: users.Group{
+			Owner:   "bob",
 			Readers: map[string]bool{"jim": true},
-		}, {ID: "x3", Owner: "bob",
+		}}, {ID: "x3", Group: users.Group{
+			Owner: "bob",
 			Readers: map[string]bool{
 				"jim":  true,
 				"john": true,
 			},
-		},
-		{ID: "x4", Owner: "john"},
-		{ID: "x5", Owner: "john",
+		}},
+		{ID: "x4", Group: users.Group{Owner: "john"}},
+		{ID: "x5", Group: users.Group{
+			Owner:   "john",
 			Readers: map[string]bool{"bob": true},
-		}, {ID: "x6", Owner: "john",
+		}}, {ID: "x6", Group: users.Group{
+			Owner:   "john",
 			Readers: map[string]bool{"jim": true},
-		}, {ID: "x7", Owner: "john",
+		}}, {ID: "x7", Group: users.Group{
+			Owner: "john",
 			Readers: map[string]bool{
 				"bob": true,
 				"jim": true,
 			},
-		},
-		{ID: "x8", Owner: "jim"},
+		}},
+		{ID: "x8", Group: users.Group{Owner: "jim"}},
 	}
 	for _, str := range given {
 		c.Assert(s.db.Update(stream.Upsert(str)), IsNil)
@@ -128,7 +144,7 @@ func (s *StreamSuite) TestGetAll(c *C) {
 
 	for i, test := range []struct {
 		user      string
-		filters   []stream.Filter
+		filters   []users.Filter
 		expectErr string
 		expect    []*stream.Stream
 	}{{
@@ -139,21 +155,21 @@ func (s *StreamSuite) TestGetAll(c *C) {
 		},
 	}, {
 		user:    "bob",
-		filters: []stream.Filter{stream.ByReader("john")},
+		filters: []users.Filter{users.ByReader("john")},
 		expect:  []*stream.Stream{given[1], given[3]},
 	}, {
 		user:    "bob",
-		filters: []stream.Filter{stream.ByReader("jim")},
+		filters: []users.Filter{users.ByReader("jim")},
 		expect:  []*stream.Stream{given[2], given[3], given[7]},
 	}, {
 		user: "bob",
-		filters: []stream.Filter{
-			stream.ByReader("jim"), stream.ByReader("john"),
+		filters: []users.Filter{
+			users.ByReader("jim"), users.ByReader("john"),
 		},
 		expect: []*stream.Stream{given[3]},
 	}, {
 		user:    "bob",
-		filters: []stream.Filter{stream.ByReader("james")},
+		filters: []users.Filter{users.ByReader("james")},
 	}, {
 		user: "john",
 		expect: []*stream.Stream{
@@ -162,21 +178,21 @@ func (s *StreamSuite) TestGetAll(c *C) {
 		},
 	}, {
 		user:    "john",
-		filters: []stream.Filter{stream.ByReader("bob")},
+		filters: []users.Filter{users.ByReader("bob")},
 		expect:  []*stream.Stream{given[5], given[7]},
 	}, {
 		user:    "john",
-		filters: []stream.Filter{stream.ByReader("jim")},
+		filters: []users.Filter{users.ByReader("jim")},
 		expect:  []*stream.Stream{given[3], given[6], given[7]},
 	}, {
 		user: "john",
-		filters: []stream.Filter{
-			stream.ByReader("bob"), stream.ByReader("jim"),
+		filters: []users.Filter{
+			users.ByReader("bob"), users.ByReader("jim"),
 		},
 		expect: []*stream.Stream{given[7]},
 	}, {
 		user:    "john",
-		filters: []stream.Filter{stream.ByReader("james")},
+		filters: []users.Filter{users.ByReader("james")},
 	}, {
 		user: "jim",
 		expect: []*stream.Stream{
@@ -185,7 +201,7 @@ func (s *StreamSuite) TestGetAll(c *C) {
 		},
 	}, {
 		user:    "jim",
-		filters: []stream.Filter{stream.ByReader("john")},
+		filters: []users.Filter{users.ByReader("john")},
 		expect:  []*stream.Stream{given[3]},
 	}} {
 		c.Logf("test %d", i)

@@ -14,6 +14,7 @@ import (
 	"github.com/synapse-garden/sg-proto/stream"
 	"github.com/synapse-garden/sg-proto/stream/river"
 	sgt "github.com/synapse-garden/sg-proto/testing"
+	"github.com/synapse-garden/sg-proto/users"
 
 	"github.com/boltdb/bolt"
 	"github.com/julienschmidt/httprouter"
@@ -56,11 +57,11 @@ func (s *RESTSuite) TestConvoCreate(c *C) {
 	srv, tokens := prepConvoAPI(c, r, &api, "bodie", "bob", "jim")
 	defer srv.Close()
 
-	conv := &convo.Convo{
+	conv := &convo.Convo{Group: users.Group{
 		Owner:   "bodie",
 		Readers: map[string]bool{"bodie": true, "bob": true},
 		Writers: map[string]bool{"bodie": true, "bob": true},
-	}
+	}}
 
 	// POST the new Convo to Create it.
 	send, err := json.Marshal(conv)
@@ -110,11 +111,11 @@ func (s *RESTSuite) TestConvoPut(c *C) {
 	srv, tokens := prepConvoAPI(c, r, &api, "bodie", "bob", "jim")
 	defer srv.Close()
 
-	conv := &convo.Convo{
+	conv := &convo.Convo{Group: users.Group{
 		Owner:   "bodie",
 		Readers: map[string]bool{"bodie": true, "bob": true},
 		Writers: map[string]bool{"bodie": true, "bob": true},
-	}
+	}}
 
 	c.Log("POST the new Convo to Create it.")
 	send, err := json.Marshal(conv)
@@ -228,11 +229,11 @@ func (s *RESTSuite) TestConvoDelete(c *C) {
 	srv, tokens := prepConvoAPI(c, r, &api, "bodie", "bob", "jim")
 	defer srv.Close()
 
-	conv := &convo.Convo{
+	conv := &convo.Convo{Group: users.Group{
 		Owner:   "bodie",
 		Readers: map[string]bool{"bodie": true, "bob": true},
 		Writers: map[string]bool{"bodie": true, "bob": true},
-	}
+	}}
 
 	// POST the new Convo to Create it.
 	send, err := json.Marshal(conv)
@@ -308,11 +309,11 @@ func (s *RESTSuite) TestConvoHangupWhileDelete(c *C) {
 	srv, tokens := prepConvoAPI(c, r, &api, "bodie")
 	defer srv.Close()
 
-	conv := &convo.Convo{
+	conv := &convo.Convo{Group: users.Group{
 		Owner:   "bodie",
 		Readers: map[string]bool{"bodie": true},
 		Writers: map[string]bool{"bodie": true},
-	}
+	}}
 
 	// POST the new Convo to Create it.
 	send, err := json.Marshal(conv)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/synapse-garden/sg-proto/store"
+	"github.com/synapse-garden/sg-proto/users"
 
 	"github.com/boltdb/bolt"
 )
@@ -74,15 +75,10 @@ var (
 
 // Stream represents user access to an underlying Router, Coupler, etc.
 type Stream struct {
-	//
-	ID string `json:"id"`
+	users.Group
 
-	Owner string `json:"owner"`
-
+	ID   string `json:"id"`
 	Name string `json:"name"`
-
-	Readers map[string]bool `json:"readers,omitempty"`
-	Writers map[string]bool `json:"writers,omitempty"`
 }
 
 // Resource implements store.Resourcer on Stream.
@@ -130,15 +126,18 @@ func Get(s *Stream, id string) func(*bolt.Tx) error {
 // GetAll returns a function which unmarshals all streams for which the
 // user has ownership.  If Filters are passed, only streams for which
 // filter.Member(stream) == true will be returned.
-func GetAll(user string, filters ...Filter) func(*bolt.Tx) ([]*Stream, error) {
+func GetAll(
+	user string,
+	filters ...users.Filter,
+) func(*bolt.Tx) ([]*Stream, error) {
 	var result []*Stream
 
-	defaultFilter := MultiOr{
-		ByOwner(user),
-		ByReader(user),
-		ByWriter(user),
+	defaultFilter := users.MultiOr{
+		users.ByOwner(user),
+		users.ByReader(user),
+		users.ByWriter(user),
 	}
-	otherFilters := MultiAnd(filters)
+	otherFilters := users.MultiAnd(filters)
 
 	return func(tx *bolt.Tx) ([]*Stream, error) {
 		b := tx.Bucket(StreamBucket)
@@ -146,16 +145,19 @@ func GetAll(user string, filters ...Filter) func(*bolt.Tx) ([]*Stream, error) {
 		// TODO: Other ways to improve this so users aren't
 		//       constantly hammering the database
 		// TODO: Benchmark test
+		var group users.Group
 		err := b.ForEach(func(k, v []byte) error {
 			next := new(Stream)
 			if err := json.Unmarshal(v, next); err != nil {
 				return err
 			}
 
+			group = next.Group
+
 			switch {
-			case !defaultFilter.Member(next):
+			case !defaultFilter.Member(group):
 				return nil
-			case !otherFilters.Member(next):
+			case !otherFilters.Member(group):
 				return nil
 			}
 

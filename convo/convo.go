@@ -5,6 +5,7 @@ import (
 
 	"github.com/synapse-garden/sg-proto/store"
 	"github.com/synapse-garden/sg-proto/stream"
+	"github.com/synapse-garden/sg-proto/users"
 
 	"github.com/boltdb/bolt"
 )
@@ -78,16 +79,16 @@ func Delete(id []byte) func(tx *bolt.Tx) error {
 // filter.Member(convo) == true will be returned.
 func GetAll(
 	user string,
-	filters ...stream.Filter,
+	filters ...users.Filter,
 ) func(*bolt.Tx) ([]*Convo, error) {
 	result := []*Convo{}
 
-	defaultFilter := stream.MultiOr{
-		stream.ByOwner(user),
-		stream.ByReader(user),
-		stream.ByWriter(user),
+	defaultFilter := users.MultiOr{
+		users.ByOwner(user),
+		users.ByReader(user),
+		users.ByWriter(user),
 	}
-	otherFilters := stream.MultiAnd(filters)
+	otherFilters := users.MultiAnd(filters)
 
 	return func(tx *bolt.Tx) ([]*Convo, error) {
 		b := tx.Bucket(ConvoBucket)
@@ -96,16 +97,19 @@ func GetAll(
 		//       constantly hammering the database
 		// TODO: Benchmark test
 		// TODO: Eliminate redundant code between Stream / Convo.
+		var group users.Group
 		err := b.ForEach(func(k, v []byte) error {
 			next := new(Convo)
 			if err := json.Unmarshal(v, next); err != nil {
 				return err
 			}
-			strConv := (*stream.Stream)(next)
+
+			group = next.Group
+
 			switch {
-			case !defaultFilter.Member(strConv):
+			case !defaultFilter.Member(group):
 				return nil
-			case !otherFilters.Member(strConv):
+			case !otherFilters.Member(group):
 				return nil
 			}
 

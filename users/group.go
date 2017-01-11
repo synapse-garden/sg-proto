@@ -1,31 +1,39 @@
-package stream
+package users
 
-// Filter determines whether the given Stream is a member of a set.
-type Filter interface {
-	Member(*Stream) bool
+// Group is a set of users which have different membership levels.
+type Group struct {
+	Owner string
+
+	Readers map[string]bool
+	Writers map[string]bool
 }
 
-// ByOwner is a Filter for Steams that have the given owner.
+// Filter determines Group membership.
+type Filter interface {
+	Member(Group) bool
+}
+
+// ByOwner is a Filter for Groups that have the given owner.
 type ByOwner string
 
 // Member implements Filter on ByOwner.
-func (b ByOwner) Member(s *Stream) bool {
+func (b ByOwner) Member(s Group) bool {
 	return s.Owner == string(b)
 }
 
-// ByReader is a Filter for Steams that have the given read user.
+// ByReader is a Filter for Groups that have the given read user.
 type ByReader string
 
 // Member implements Filter on ByReader.
-func (b ByReader) Member(s *Stream) bool {
+func (b ByReader) Member(s Group) bool {
 	return s.Readers[string(b)]
 }
 
-// ByWriter is a Filter for Steams that have the given read user.
+// ByWriter is a Filter for Groups that have the given read user.
 type ByWriter string
 
 // Member implements Filter on ByWriter.
-func (b ByWriter) Member(s *Stream) bool {
+func (b ByWriter) Member(s Group) bool {
 	return s.Writers[string(b)]
 }
 
@@ -33,7 +41,7 @@ func (b ByWriter) Member(s *Stream) bool {
 type MultiAnd []Filter
 
 // Member implements Filter on MultiAnd.
-func (m MultiAnd) Member(s *Stream) bool {
+func (m MultiAnd) Member(s Group) bool {
 	for _, f := range []Filter(m) {
 		if !f.Member(s) {
 			return false
@@ -47,7 +55,7 @@ func (m MultiAnd) Member(s *Stream) bool {
 type MultiOr []Filter
 
 // Member implements Filter on MultiOr.
-func (m MultiOr) Member(s *Stream) bool {
+func (m MultiOr) Member(s Group) bool {
 	for _, f := range []Filter(m) {
 		if f.Member(s) {
 			return true

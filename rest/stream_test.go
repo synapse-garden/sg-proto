@@ -11,6 +11,7 @@ import (
 	"github.com/synapse-garden/sg-proto/stream"
 	"github.com/synapse-garden/sg-proto/stream/river"
 	sgt "github.com/synapse-garden/sg-proto/testing"
+	"github.com/synapse-garden/sg-proto/users"
 
 	"github.com/boltdb/bolt"
 	"github.com/julienschmidt/httprouter"
@@ -41,10 +42,13 @@ func (s *RESTSuite) TestStream(c *C) {
 	id := uuid.NewV4()
 
 	str := &stream.Stream{
-		Owner:   "bodie",
-		ID:      id.String(),
-		Readers: map[string]bool{"bodie": true, "bob": true},
-		Writers: map[string]bool{"bodie": true, "bob": true},
+		Group: users.Group{
+			Owner:   "bodie",
+			Readers: map[string]bool{"bodie": true, "bob": true},
+			Writers: map[string]bool{"bodie": true, "bob": true},
+		},
+
+		ID: id.String(),
 	}
 
 	// Have to POST a new Stream.
