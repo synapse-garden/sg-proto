@@ -220,6 +220,9 @@ func (s *RESTSuite) TestConvoPut(c *C) {
 	c.Assert(ws.JSON.Receive(connJim, msgGot), IsNil)
 	c.Check(msgGot.Sender, Equals, "bodie")
 
+	c.Assert(connBodie.Close(), IsNil)
+	c.Assert(connJim.Close(), IsNil)
+
 	cleanupConvoAPI(c, api)
 }
 
