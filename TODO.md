@@ -98,6 +98,31 @@
 
 - [ ] Organize TODOs
 
+- [ ] Cloud (self?) deploy service
+
+- [ ] Consider an "antifragile" failure-friendly design approach
+- [ ] Figure out a way to sort things in local database instead of
+      random order due to UUID keys.  Incremental ID in bucket for local
+      ordering, with UUID "ID" value for stored object when there's a
+      universal object?
+- [ ] Profile Bounty needs transaction ledger of some kind -- think about it
+- [ ] Use store.ID *everywhere* -- store.Marshal / store.Unmarshal
+      at least
+- [ ] Do some revisions to store.LoadStorer / etc -- maybe there's a
+      better way.  A struct containing an ID with Store / etc methods?
+- [ ] Think about conditioning.
+- [ ] Many users doing synchronous Task updates could lock things up --
+      find a better way.  Maybe all Tasks should be LRU cached with a
+      lazy Mutex that only serializes in case of collision?  Could this
+      be done with channels instead?
+- [ ] Solve the problem of name collisions in Task and Stream / Convo
+- [ ] Unify Stream and Convo -- maybe they could just be identical and
+      you pass the bucket to the API
+- [ ] Marshalable ID type (uuid.UUID with {Unm|M}arshalJSON)
+- [ ] Refactor to DSL for endpoint definition -- we want this to be easy
+      to extend
+- [ ] Caching / indexing helpers
+- [ ] High-level intelligence design
 - [ ] "Resource" interface to make CRUD much, much simpler
 - [x] The design of Rivers must support a future implementation which
       permits the API to use req/rep Rivers to control the behavior of
@@ -368,9 +393,27 @@
 - [x] Handle errors sanely
 - [x] Test what happens when one or more users hang up, etc
 
-## Todo
+## Task
 
-- [ ] Create item with bounty and due date
+- [x] CRUD Task HTTP API
+  - [x] GET /tasks ( filters )
+    - [ ] Date: &begin=<RFC3999>, &end=<RFC3999>
+    - [ ] Overdue / Not yet due
+    - [ ] Max: &num=<int>
+    - [ ] Paginate: &per_page=<int>, &page=<int>
+  - [x] GET /tasks/:id
+  - [x] POST /tasks
+  - [x] DELETE /tasks/:id
+  - [x] PUT /tasks/:id
+
+- [ ] Create task with bounty and due date
+- [ ] Update user profile with completed bounty
 - [ ] Complete item before due date, receive bounty
 - [ ] Notifications
-  - [ ] Notify on CRUD
+  - [x] Notify on CRUD
+  - [ ] Update profile on bounty update
+
+- [x] Notes hash with task ID => external bucket IDs (TextBucket)
+  - [x] Stored as Task.Resources
+- [x] Make sure Task.Resources is cleared before store, etc.
+- [x] Unit tests
