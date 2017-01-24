@@ -84,8 +84,8 @@ func (s *RESTSuite) TestConnectNotifs(c *C) {
 	// correctly, but pub3 messages are not received since it wasn't
 	// connected to.
 	msg := new(store.ResourceBox)
-	expect1 := map[string]interface{}{"X":float64(0)}
-	expect2 := map[string]interface{}{"X":float64(1)}
+	expect1 := map[string]interface{}{"X": float64(0)}
+	expect2 := map[string]interface{}{"X": float64(1)}
 
 	c.Assert(notif.Encode(pub1, fooResourcer{}, notif.MakeUserTopic("bodie")), IsNil)
 	c.Check(ws.JSON.Receive(conn1, msg), IsNil)

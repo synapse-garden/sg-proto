@@ -31,9 +31,7 @@ type RESTSuite struct {
 	tickets []incept.Ticket
 }
 
-var (
-	_ = Suite(&RESTSuite{})
-)
+var _ = Suite(new(RESTSuite))
 
 func (s *RESTSuite) SetUpTest(c *C) {
 	db, tmpDir, err := sgt.TempDB("sg-test")

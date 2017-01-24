@@ -230,6 +230,7 @@ func (s Stream) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 			store.Bucket(userID),
 		)
 		eC = rsp.Close()
+
 		<-errCh
 		switch {
 		case eD != nil && eC != nil:
