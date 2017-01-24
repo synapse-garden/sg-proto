@@ -4,25 +4,35 @@ import (
 	"github.com/synapse-garden/sg-proto/store"
 
 	"github.com/boltdb/bolt"
-	uuid "github.com/satori/go.uuid"
 )
 
 // TextBucket is the database location where text is stored.
 var TextBucket = store.Bucket("text")
 
-// Text is a reference to a text object in the database.
-type Text uuid.UUID
+// ID is a reference to a text object in the database.
+type ID store.ID
 
-// Store implements store.Storer on Text.
-func (t Text) Store(what interface{}) func(tx *bolt.Tx) error {
-	return store.Marshal(TextBucket, what, t[:])
+// MakeID makes an ID from the given string by hashing with the given
+// store.ID.
+func MakeID(i store.ID, from string) ID {
+	return ID(i.HashWith(from))
 }
 
-// Load implements store.Loader on Text.
-func (t Text) Load(into interface{}) func(tx *bolt.Tx) error {
+// Store implements store.Storer on ID.
+func (i ID) Store(what interface{}) func(*bolt.Tx) error {
+	return store.Marshal(TextBucket, what, i[:])
+}
+
+// Load implements store.Loader on ID.
+func (i ID) Load(into interface{}) func(*bolt.Tx) error {
 	if tStr, ok := into.(*string); ok {
-		return store.Unmarshal(TextBucket, tStr, t[:])
+		return store.Unmarshal(TextBucket, tStr, i[:])
 	}
 
 	return store.Errorf("unexpected Load argument of type %T", into)
+}
+
+// Delete implements store.Deleter on ID.
+func (i ID) Delete(tx *bolt.Tx) error {
+	return tx.Bucket(TextBucket).Delete(i[:])
 }

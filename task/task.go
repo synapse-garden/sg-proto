@@ -38,16 +38,18 @@ type Task struct {
 
 // GetAll returns a function which unmarshals all tasks for which the
 // user has ownership.  If Filters are passed, only tasks for which
-// filter.Member(task) == true will be returned.
-func GetAll(user string, filters ...users.Filter) func(*bolt.Tx) ([]*Task, error) {
+// filter.Member(task) == true will be returned.  Note that the order of
+// the returned slice is determined by the IDs of the Tasks, which are
+// random UUIDs.
+func GetAll(user string, filters ...Filter) func(*bolt.Tx) ([]*Task, error) {
 	var result []*Task
 
-	defaultFilter := users.MultiOr{
-		users.ByOwner(user),
-		users.ByReader(user),
-		users.ByWriter(user),
+	defaultFilter := MultiOr{
+		ByOwner(user),
+		ByReader(user),
+		ByWriter(user),
 	}
-	otherFilters := users.MultiAnd(filters)
+	otherFilters := MultiAnd(filters)
 
 	return func(tx *bolt.Tx) ([]*Task, error) {
 		b := tx.Bucket(TaskBucket)
@@ -55,19 +57,16 @@ func GetAll(user string, filters ...users.Filter) func(*bolt.Tx) ([]*Task, error
 		// TODO: Other ways to improve this so users aren't
 		//       constantly hammering the database
 		// TODO: Benchmark test
-		var group users.Group
 		err := b.ForEach(func(k, v []byte) error {
 			next := new(Task)
 			if err := json.Unmarshal(v, next); err != nil {
 				return err
 			}
 
-			group = next.Group
-
 			switch {
-			case !defaultFilter.Member(group):
+			case !defaultFilter.Member(next):
 				return nil
-			case !otherFilters.Member(group):
+			case !otherFilters.Member(next):
 				return nil
 			}
 

@@ -1,7 +1,9 @@
 package text_test
 
 import (
+	"fmt"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/synapse-garden/sg-proto/store"
@@ -20,7 +22,7 @@ type TextSuite struct {
 }
 
 var _ = Suite(&TextSuite{})
-var _ = store.LoadStorer(text.Text(uuid.Nil))
+var _ = store.LoadStorer(text.ID(uuid.Nil))
 
 func Test(t *testing.T) { TestingT(t) }
 
@@ -39,35 +41,49 @@ func (s *TextSuite) TearDownTest(c *C) {
 	c.Assert(os.Remove(s.tmpDir), IsNil)
 }
 
-func (s *TextSuite) TestTextLoadStore(c *C) {
+func (s *TextSuite) TestLoadStore(c *C) {
 	foo := struct{}{}
 	c.Check(s.View(
-		text.Text(uuid.Nil).Load(foo),
+		text.ID(uuid.Nil).Load(foo),
 	), ErrorMatches, "unexpected Load argument of type struct {}")
 
 	txt := "hello there"
 	into := new(string)
-	id := uuid.NewV4()
-	c.Assert(s.Update(text.Text(id).Store(txt)), IsNil)
-	c.Assert(s.View(text.Text(id).Load(into)), IsNil)
+	id := text.ID(uuid.NewV4())
+	c.Assert(s.Update(id.Store(txt)), IsNil)
+	c.Assert(s.View(id.Load(into)), IsNil)
 	c.Check(*into, Equals, txt)
 
 	more := []string{"hi", "how are you", "I'm well thanks"}
 	intos := []*string{new(string), new(string), new(string)}
 	ids := []uuid.UUID{uuid.NewV4(), uuid.NewV4(), uuid.NewV4()}
 	c.Assert(s.Update(store.Wrap(
-		text.Text(ids[0]).Store(more[0]),
-		text.Text(ids[1]).Store(more[1]),
-		text.Text(ids[2]).Store(more[2]),
+		text.ID(ids[0]).Store(more[0]),
+		text.ID(ids[1]).Store(more[1]),
+		text.ID(ids[2]).Store(more[2]),
 	)), IsNil)
 
 	c.Assert(s.View(store.Wrap(
-		text.Text(ids[0]).Load(intos[0]),
-		text.Text(ids[1]).Load(intos[1]),
-		text.Text(ids[2]).Load(intos[2]),
+		text.ID(ids[0]).Load(intos[0]),
+		text.ID(ids[1]).Load(intos[1]),
+		text.ID(ids[2]).Load(intos[2]),
 	)), IsNil)
 
 	for i := 0; i < 3; i++ {
 		c.Check(*intos[i], Equals, more[i])
 	}
+
+	c.Assert(s.Update(id.Delete), IsNil)
+
+	err := s.View(id.Load(into))
+	c.Check(
+		reflect.TypeOf(err),
+		DeepEquals,
+		reflect.TypeOf(new(store.MissingError)),
+	)
+
+	c.Check(err.Error(), Equals, fmt.Sprintf(
+		"key %q not in bucket `text`", id,
+	))
+
 }
