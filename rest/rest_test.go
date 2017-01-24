@@ -13,7 +13,9 @@ import (
 	"github.com/synapse-garden/sg-proto/store"
 	"github.com/synapse-garden/sg-proto/stream"
 	"github.com/synapse-garden/sg-proto/stream/river"
+	"github.com/synapse-garden/sg-proto/task"
 	sgt "github.com/synapse-garden/sg-proto/testing"
+	"github.com/synapse-garden/sg-proto/text"
 	"github.com/synapse-garden/sg-proto/users"
 
 	"github.com/boltdb/bolt"
@@ -51,6 +53,8 @@ func (s *RESTSuite) SetUpTest(c *C) {
 			convo.ConvoBucket,
 			convo.MessageBucket,
 			convo.ScribeBucket,
+			text.TextBucket,
+			task.TaskBucket,
 		),
 	)), IsNil)
 	s.db, s.tmpDir = db, tmpDir
