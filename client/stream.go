@@ -2,6 +2,7 @@ package client
 
 import (
 	"github.com/synapse-garden/sg-proto/stream"
+	"github.com/synapse-garden/sg-proto/users"
 
 	"github.com/pkg/errors"
 )
@@ -12,15 +13,18 @@ import (
 func NewStream(c *Client, name, from, to string) (*stream.Stream, error) {
 	// Create Stream if not exist
 	str := &stream.Stream{
-		Owner: from,
-		Readers: map[string]bool{
-			from: true,
-			to:   true,
+		Group: users.Group{
+			Owner: from,
+			Readers: map[string]bool{
+				from: true,
+				to:   true,
+			},
+			Writers: map[string]bool{
+				from: true,
+				to:   true,
+			},
 		},
-		Writers: map[string]bool{
-			from: true,
-			to:   true,
-		},
+
 		Name: name,
 	}
 	if err := c.CreateStream(str); err != nil {
