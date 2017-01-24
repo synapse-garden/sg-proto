@@ -95,10 +95,24 @@ func Bind(sr SendRecver, read SocketReader) xws.Handler {
 
 // BindRead receives messages from a Recver and writes them to the Conn.
 // It should be used in place of Bind for one-way messaging from the
-// backend to the websocket client.
-func BindRead(r Recver) xws.Handler {
+// backend to the websocket client.  It reads and discards all bytes
+// sent on the Conn, and closes if Conn.Read returns io.EOF.
+func BindRead(r RecvCloser) xws.Handler {
 	return func(c *xws.Conn) {
-		// Recv from r; pass result to c Write if no error.
+		go func() {
+			// Keep looping and discarding any websocket
+			// input until io.EOF indicating the client was
+			// closed.
+			for {
+				err := xws.JSON.Receive(c, nil)
+				if err == io.EOF {
+					break
+				}
+			}
+			r.Close()
+		}()
+		// Recv from r; pass result to c Write if no error.  If
+		// a write error occurs, just be done.
 		for bs, err := r.Recv(); err == nil; bs, err = r.Recv() {
 			if _, err = c.Write(bs); err != nil {
 				break

@@ -140,6 +140,6 @@ func (h HangupRecver) Send(bs []byte) error {
 
 // Recver returns the HangupRecver's Recv socket, which is closed when
 // the HangupRecver replies to a hangup survey.
-func (h HangupRecver) Recver() Recver {
+func (h HangupRecver) Recver() RecvCloser {
 	return h.socket
 }

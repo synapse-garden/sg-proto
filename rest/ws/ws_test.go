@@ -23,6 +23,19 @@ func (s *WSSuite) TestCheck(c *C) {
 	c.Assert(ws.Check(nil, nil), IsNil)
 }
 
+type recver struct {
+	*io.PipeReader
+}
+
+func (r recver) Recv() ([]byte, error) {
+	bs := make([]byte, 1024)
+	n, err := r.Read(bs)
+	if n > 0 {
+		return bs[0:n], err
+	}
+	return nil, err
+}
+
 type sr struct {
 	*io.PipeReader
 	*io.PipeWriter
@@ -83,3 +96,46 @@ func (s *WSSuite) TestBind(c *C) {
 
 	c.Assert(conn.Close(), IsNil)
 }
+
+/*
+func (s *WSSuite) TestBindRead(c *C) {
+	srv := recver{r}
+
+	server := httptest.NewServer(xws.Server{
+		Handshake: ws.Check,
+		Handler:   ws.BindRead(srv, ws.DefaultRead),
+	})
+
+	u, err := url.Parse(server.URL)
+	c.Assert(err, IsNil)
+	u.Scheme = "ws"
+
+	conn, err := xws.DialConfig(&xws.Config{
+		Location: u,
+		Origin:   &url.URL{},
+		Version:  xws.ProtocolVersionHybi13,
+	})
+	c.Assert(err, IsNil)
+
+	_, err = conn.Write([]byte("hello"))
+	c.Assert(err, IsNil)
+
+	bs := make([]byte, 1024)
+	n, err := conn.Read(bs)
+	c.Assert(err, IsNil)
+	c.Check(string(bs[0:n]), Equals, "hello")
+
+	_, err = conn.Write([]byte(strings.Repeat("!", 128)))
+	c.Assert(err, IsNil)
+
+	bs = make([]byte, 1024)
+	n, err = conn.Read(bs)
+	c.Assert(err, IsNil)
+	c.Check(string(bs[0:n]), Equals, strings.Repeat("!", 128))
+
+	c.Assert(srv.PipeReader.Close(), IsNil)
+	c.Assert(srv.PipeWriter.Close(), IsNil)
+
+	c.Assert(conn.Close(), IsNil)
+}
+*/

@@ -76,7 +76,9 @@ func Bind(
 		Token{DB: db},
 		Profile{DB: db},
 		Notif{DB: db},
-		Stream{DB: db},
+		// Note that notifying APIs must be references since the
+		// notif connect sets a Pub socket handle in the struct.
+		&Stream{DB: db},
 		&Convo{DB: db},
 	} {
 		if err := api.Bind(htr); err != nil {
