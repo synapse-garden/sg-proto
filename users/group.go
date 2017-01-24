@@ -2,10 +2,10 @@ package users
 
 // Group is a set of users which have different membership levels.
 type Group struct {
-	Owner string
+	Owner string `json:"owner"`
 
-	Readers map[string]bool
-	Writers map[string]bool
+	Readers map[string]bool `json:"readers"`
+	Writers map[string]bool `json:"writers"`
 }
 
 // Filter determines Group membership.
