@@ -1,6 +1,10 @@
 package store
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/boltdb/bolt"
+)
 
 type ErrMissingBucket []byte
 
@@ -14,6 +18,24 @@ func IsMissingBucket(err error) bool {
 	}
 	_, ok := err.(ErrMissingBucket)
 	return ok
+}
+
+func (m Mutation) OrMissing(tx *bolt.Tx) error {
+	err := m(tx)
+	if IsMissingBucket(err) || IsMissing(err) {
+		return nil
+	}
+	return err
+}
+
+// OrMissing is a View method which ignores any Missing errors.  All
+// other error values are passed through.
+func (v View) OrMissing(tx *bolt.Tx) error {
+	err := v(tx)
+	if IsMissingBucket(err) || IsMissing(err) {
+		return nil
+	}
+	return err
 }
 
 type KeyError struct {
