@@ -27,7 +27,7 @@
 - [ ] Dep chains?
 - [ ] DB interface + cache?
 - [ ] Optimize buckets / transactions in packages?  Pass needed behaviors
-   through store package?  NewTickets, etc. inefficient
+      through store package?  NewTickets, etc. inefficient
 - [ ] Store.WrapBucket(store.Bucket(...), ...Transact)
 - [ ] Decide about capnproto / protobuf for Bolt / Rivers
 - [ ] Read-only Streams
@@ -221,7 +221,8 @@
   - [ ] Benchmarking?
   - [ ] Bolt?
     - [ ] Configure cache settings?
-- [ ] Deleting the user's profile doesn't eliminate his owned objects.
+- [ ] Deleting the user's profile doesn't eliminate his owned objects
+      and open rivers
 - [ ] Bad usernames cannot be looked up for expired Sessions
 
 ## Admin API
@@ -238,7 +239,7 @@
 
 - [x] Split Streams and Rivers
 - [ ] Make sure all empty GETs return [], not null
-- [ ] Tighten up Convo REST API, add defered cleanups
+- [ ] Tighten up Convo REST API, add deferred cleanups
 - [ ] Update README.md and CONTRIBUTING.md, clean up 0.0.1 TODO
 - [ ] Comment all exported functions, types, methods, and constants
 - [ ] Make sure not just anyone can get a refresh token
