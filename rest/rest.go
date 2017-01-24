@@ -8,6 +8,8 @@ import (
 	"github.com/synapse-garden/sg-proto/store"
 	"github.com/synapse-garden/sg-proto/stream"
 	"github.com/synapse-garden/sg-proto/stream/river"
+	"github.com/synapse-garden/sg-proto/task"
+	"github.com/synapse-garden/sg-proto/text"
 	"github.com/synapse-garden/sg-proto/users"
 
 	"github.com/boltdb/bolt"
@@ -52,18 +54,23 @@ func Bind(
 	source SourceInfo,
 	apiKey auth.Token,
 ) (*httprouter.Router, error) {
-	if err := db.Update(store.Prep(
-		admin.AdminBucket,
-		incept.TicketBucket,
-		users.UserBucket,
-		auth.LoginBucket,
-		auth.SessionBucket,
-		auth.RefreshBucket,
-		auth.ContextBucket,
-		stream.StreamBucket,
-		river.RiverBucket,
-		convo.ConvoBucket,
-		convo.MessageBucket,
+	if err := db.Update(store.Wrap(
+		store.Prep(
+			admin.AdminBucket,
+			incept.TicketBucket,
+			users.UserBucket,
+			auth.LoginBucket,
+			auth.SessionBucket,
+			auth.RefreshBucket,
+			auth.ContextBucket,
+			stream.StreamBucket,
+			river.RiverBucket,
+			convo.ConvoBucket,
+			convo.MessageBucket,
+			text.TextBucket,
+			task.TaskBucket,
+		),
+		river.ClearRivers,
 	)); err != nil {
 		return nil, err
 	}
@@ -80,6 +87,7 @@ func Bind(
 		// notif connect sets a Pub socket handle in the struct.
 		&Stream{DB: db},
 		&Convo{DB: db},
+		&Task{DB: db},
 	} {
 		if err := api.Bind(htr); err != nil {
 			return nil, err
