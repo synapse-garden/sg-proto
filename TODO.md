@@ -197,6 +197,10 @@
 - [x] Race in Convo PUT due to hangup
 - [x] Race in Scribe hangup / Convo Delete.
 - [x] scribe DeleteCheckins fails if the Scribe had no checkins.
+- [x] Notif hangup Recv never finishes if the websocket is closed
+- [ ] No auth timeout / river / notifs closure
+- [ ] Tokens don't refresh on activity
+  - [ ] Add this to token middleware?
 - [ ] Old Bus buckets should be deleted after the convo or stream is deleted.
 - [ ] Diagnose occasional test failures in RiverSuite.TestNewBus
 - [ ] Better testing of REST resource security.
@@ -254,18 +258,24 @@
 
 ## Account
 
-- [x] GET /profile
-- [x] DELETE /profile
 - [ ] incept.PunchTicket
 - [x] Ticket API
 - [x] Password hash
 - [x] Create user
 - [x] Log in
 - [x] Log out
+- [x] Test rest.Incept auth.Login creation
+
+## Profile
+
+- [x] GET /profile
+- [x] DELETE /profile
+
 - [ ] Have bounty
 - [ ] User is notified when profile changes (e.g. bounty increase)
 - [ ] Update with new password
-- [x] Test rest.Incept auth.Login creation
+
+## Ledger?
 
 ## Streams
 
@@ -328,8 +338,9 @@
 	      created if not present by first person to join convo, and is
 		  hung up by last person to leave
   - [ ] Convo connections time out when inactive for a while (15 min?)
+  - [ ] Convos time out when login times out
 
-- [ ] GET /convos/<id>/messages? ( start/end/etc )
+- [x] GET /convos/<id>/messages? ( start/end/etc )
   - [ ] More filters
 
 - [x] Chat between two or more users (on top of streams API)
