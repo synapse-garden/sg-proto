@@ -32,16 +32,13 @@ type Stream struct {
 }
 
 // Bind implements API.Bind on Stream.
-func (s Stream) Bind(r *htr.Router) error {
+func (s *Stream) Bind(r *htr.Router) error {
 	db := s.DB
 	if db == nil {
 		return errors.New("Stream DB handle must not be nil")
 	}
 
 	err := db.Update(func(tx *bolt.Tx) (e error) {
-		if err := river.ClearRivers(tx); err != nil {
-			return err
-		}
 		s.Pub, e = river.NewPub(StreamNotifs, NotifStream, tx)
 		return
 	})

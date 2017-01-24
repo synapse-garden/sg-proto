@@ -40,9 +40,6 @@ func (c *Convo) Bind(r *htr.Router) error {
 	}
 
 	err := db.Update(func(tx *bolt.Tx) (e error) {
-		if err := river.ClearRivers(tx); err != nil {
-			return err
-		}
 		c.Pub, e = river.NewPub(ConvoNotifs, NotifStream, tx)
 		return
 	})
