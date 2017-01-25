@@ -224,7 +224,6 @@
 - [x] scribe DeleteCheckins fails if the Scribe had no checkins.
 - [x] Notif hangup Recv never finishes if the websocket is closed
 - [x] Notifying APIs should not clear notif rivers; do that on startup
-- [ ] Clear out old login tokens on startup
 - [ ] No auth timeout / river / notifs closure
 - [ ] Tokens don't refresh on activity
   - [ ] Add this to token middleware?
@@ -277,6 +276,7 @@
 
 ## Login / Session / Logout
 
+- [x] Clear out old session tokens on startup
 - [x] auth.Session API
 - [ ] auth.Login tests
 - [x] Delineate split between account (users.User) and auth.Login
