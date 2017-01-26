@@ -25,7 +25,7 @@ func (s *ConvoSuite) SetUpTest(c *C) {
 	db, tmpDir, err := sgt.TempDB("sg-convo-test")
 	c.Assert(err, IsNil)
 	c.Assert(db.Update(store.Wrap(
-		store.Migrate(store.Version),
+		store.Migrate(store.VerCurrent),
 		store.SetupBuckets(
 			convo.ConvoBucket,
 			convo.MessageBucket,

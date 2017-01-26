@@ -248,3 +248,13 @@ func DeleteSession(s *Session) func(*bolt.Tx) error {
 		return nil
 	}
 }
+
+// ClearSessions is a Mutation which deletes and re-creates the Sessions
+// Bucket.
+func ClearSessions(tx *bolt.Tx) error {
+	if err := tx.DeleteBucket(SessionBucket); err != nil {
+		return err
+	}
+	_, err := tx.CreateBucket(SessionBucket)
+	return err
+}

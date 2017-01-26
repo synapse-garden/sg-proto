@@ -70,6 +70,7 @@ func Bind(
 			text.TextBucket,
 			task.TaskBucket,
 		),
+		auth.ClearSessions,
 		river.ClearRivers,
 	)); err != nil {
 		return nil, err

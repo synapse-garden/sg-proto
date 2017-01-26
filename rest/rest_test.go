@@ -37,7 +37,7 @@ func (s *RESTSuite) SetUpTest(c *C) {
 	db, tmpDir, err := sgt.TempDB("sg-test")
 	c.Assert(err, IsNil)
 	c.Assert(db.Update(store.Wrap(
-		store.Migrate(store.Version),
+		store.Migrate(store.VerCurrent),
 		store.SetupBuckets(
 			admin.AdminBucket,
 			incept.TicketBucket,
@@ -54,6 +54,8 @@ func (s *RESTSuite) SetUpTest(c *C) {
 			text.TextBucket,
 			task.TaskBucket,
 		),
+		auth.ClearSessions,
+		river.ClearRivers,
 	)), IsNil)
 	s.db, s.tmpDir = db, tmpDir
 

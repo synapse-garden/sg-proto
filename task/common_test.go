@@ -27,7 +27,7 @@ func (s *TaskSuite) SetUpTest(c *C) {
 	db, tmpDir, err := sgt.TempDB("sg-stream-test")
 	c.Assert(err, IsNil)
 	c.Assert(db.Update(store.Wrap(
-		store.Migrate(store.Version),
+		store.Migrate(store.VerCurrent),
 		store.SetupBuckets(task.TaskBucket),
 		store.SetupBuckets(text.TextBucket),
 	)), IsNil)

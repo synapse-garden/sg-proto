@@ -1,15 +1,25 @@
 package store
 
 import (
-	"bytes"
-
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
 )
 
+type Version string
+
+const (
+	VerNone       = Version("")
+	VerAlpha001_2 = Version("0.0.1-alpha-2")
+
+	VerCurrent = VerAlpha001_2
+)
+
 var (
-	Version       = []byte("0.0.1-alpha-2")
 	VersionBucket = []byte("version")
+
+	migrations = map[Version]map[Version]func(*bolt.Tx) error{
+		VerNone: {VerAlpha001_2: PutV(VerCurrent)},
+	}
 )
 
 // Bucket is an identifier for a package constant to define the BoltDB
@@ -20,7 +30,7 @@ type Bucket []byte
 
 func Prep(buckets ...Bucket) func(*bolt.Tx) error {
 	return Wrap(
-		Migrate(Version),
+		Migrate(VerCurrent),
 		SetupBuckets(buckets...),
 	)
 }
@@ -38,40 +48,43 @@ func SetupBuckets(buckets ...Bucket) func(*bolt.Tx) error {
 	}
 }
 
-func Migrate(version []byte) func(*bolt.Tx) error {
+func Migrate(v Version) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
-		if b := tx.Bucket(VersionBucket); b != nil {
-			newVer := b.Get([]byte("version"))
-			if bytes.Compare(version, newVer) != 0 {
-				return MigrateFrom(tx, version)
+		b := tx.Bucket(VersionBucket)
+		if b != nil {
+			oldVer := Version(b.Get([]byte("version")))
+			if v != oldVer {
+				return MigrateFrom(tx, oldVer, v)
 			}
 			return nil
 		}
-
-		b, err := tx.CreateBucket(VersionBucket)
-		if err != nil {
-			return err
-		}
-		err = b.Put([]byte("version"), Version)
-		if err != nil {
-			return err
-		}
-		return Migrate(Version)(tx)
+		return MigrateFrom(tx, VerNone, v)
 	}
 }
 
-func MigrateFrom(tx *bolt.Tx, from []byte) error {
-	if bytes.Compare(from, Version) == 0 {
-		// No need to migrate, already on latest version
-		return nil
-	}
-	migration, ok := map[string]func(*bolt.Tx) error{
-		"0.0.1-alpha-2": Put(VersionBucket, []byte("version"), Version),
-	}[string(from)]
+func MigrateFrom(tx *bolt.Tx, from, to Version) error {
+	msFrom, ok := migrations[from]
 	if !ok {
 		return errors.Errorf("no migration defined from version %#q", from)
 	}
-	return migration(tx)
+	if from == to {
+		return nil
+	}
+	mTo, ok := msFrom[to]
+	if !ok {
+		return errors.Errorf("no migration defined from version %#q to %#q", from, to)
+	}
+	return mTo(tx)
+}
+
+func PutV(v Version) func(*bolt.Tx) error {
+	return Wrap(
+		func(tx *bolt.Tx) error {
+			_, err := tx.CreateBucketIfNotExists(VersionBucket)
+			return err
+		},
+		Put(VersionBucket, []byte("version"), []byte(v)),
+	)
 }
 
 func Wrap(apps ...func(*bolt.Tx) error) func(*bolt.Tx) error {

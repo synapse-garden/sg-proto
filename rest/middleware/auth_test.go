@@ -35,7 +35,7 @@ func (s *MiddlewareSuite) SetUpTest(c *C) {
 	db, tmpDir, err := sgt.TempDB("sg-test")
 	c.Assert(err, IsNil)
 	c.Assert(db.Update(store.Wrap(
-		store.Migrate(store.Version),
+		store.Migrate(store.VerCurrent),
 		store.SetupBuckets(
 			auth.SessionBucket,
 			auth.RefreshBucket,

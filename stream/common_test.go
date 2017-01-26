@@ -25,7 +25,7 @@ func (s *StreamSuite) SetUpTest(c *C) {
 	db, tmpDir, err := sgt.TempDB("sg-stream-test")
 	c.Assert(err, IsNil)
 	c.Assert(db.Update(store.Wrap(
-		store.Migrate(store.Version),
+		store.Migrate(store.VerCurrent),
 		store.SetupBuckets(stream.StreamBucket),
 	)), IsNil)
 	s.db, s.tmpDir = db, tmpDir
