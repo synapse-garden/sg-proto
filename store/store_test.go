@@ -1,6 +1,7 @@
 package store_test
 
 import (
+	"os"
 	tt "testing"
 
 	"github.com/synapse-garden/sg-proto/store"
@@ -29,6 +30,7 @@ func (s *StoreSuite) SetUpTest(c *C) {
 
 func (s *StoreSuite) TearDownTest(c *C) {
 	c.Assert(testing.CleanupDB(s.DB), IsNil)
+	c.Assert(os.Remove(s.tmpDir), IsNil)
 }
 
 func (s *StoreSuite) TestPrep(c *C) {
