@@ -100,6 +100,7 @@
 
 - [ ] Cloud (self?) deploy service
 
+- [ ] -wipe flag to reset DB
 - [ ] Consider an "antifragile" failure-friendly design approach
 - [ ] Figure out a way to sort things in local database instead of
       random order due to UUID keys.  Incremental ID in bucket for local
@@ -224,6 +225,7 @@
 - [x] scribe DeleteCheckins fails if the Scribe had no checkins.
 - [x] Notif hangup Recv never finishes if the websocket is closed
 - [x] Notifying APIs should not clear notif rivers; do that on startup
+- [ ] Scribe hangup fails if database deleted (makes tests fail)
 - [ ] No auth timeout / river / notifs closure
 - [ ] Tokens don't refresh on activity
   - [ ] Add this to token middleware?
@@ -406,7 +408,7 @@
   - [x] DELETE /tasks/:id
   - [x] PUT /tasks/:id
 
-- [ ] Create task with bounty and due date
+- [x] Create task with bounty and due date
 - [ ] Update user profile with completed bounty
 - [ ] Complete item before due date, receive bounty
 - [ ] Notifications
