@@ -301,8 +301,8 @@
 - [x] GET /profile
 - [x] DELETE /profile
 
-- [ ] Have bounty
-- [ ] User is notified when profile changes (e.g. bounty increase)
+- [x] Have bounty
+- [x] User is notified when profile changes (e.g. bounty increase)
 - [ ] Update with new password
 
 ## Ledger?
@@ -409,11 +409,13 @@
   - [x] PUT /tasks/:id
 
 - [x] Create task with bounty and due date
-- [ ] Update user profile with completed bounty
-- [ ] Complete item before due date, receive bounty
-- [ ] Notifications
+- [x] Update user profile with completed bounty
+- [ ] Complete item before due date, receive bounty (defer til later)
+  - [ ] Some form of contract?
+- [x] Complete item, always receive bounty
+- [x] Notifications
   - [x] Notify on CRUD
-  - [ ] Update profile on bounty update
+  - [x] Update profile on bounty update
 
 - [x] Notes hash with task ID => external bucket IDs (TextBucket)
   - [x] Stored as Task.Resources
