@@ -100,6 +100,15 @@
 
 - [ ] Cloud (self?) deploy service
 
+- [ ] User set type
+- [ ] Think about true vs false users in groups -- use slice in API?
+- [ ] Think about compressing Notes.
+- [ ] Figure out some technique to formalize state translations
+      permitted on group membership instead of manually checking
+      everything.  Permitter interface{ Permit(u) bool } minimum?
+      Implement on methods?
+  - [ ] Make a few simpler experiments.
+- [ ] Map out bounty interactions fully and consider irreversible bounty.
 - [ ] -wipe flag to reset DB
 - [ ] Consider an "antifragile" failure-friendly design approach
 - [ ] Figure out a way to sort things in local database instead of
@@ -255,6 +264,7 @@
 
 - [x] AuthAdmin middleware
 - [x] Create ticket
+- [ ] PATCH /admin/users/
 - [ ] GET /tickets?per_page=n&page=m
 - [x] Delete ticket(s)
 - [x] Master API key printed on startup?
@@ -323,7 +333,8 @@
 - [x] Stream members are notified when a user connects to a Stream
 - [x] Stream members are notified when a user leaves a Stream
 - [ ] Delete meta buckets on Convo close.
-- [ ] Close running stream from API (use Survey/Resp)
+- [ ] Close running stream ("river") from API (use Survey/Resp)
+- [ ] Close all users' rivers from API
 - [ ] Removing a user from a Stream hangs up the user's Stream bindings
 - [ ] Use https://golang.org/pkg/net/http/httptrace/ for REST test
 - [ ] Inactive Rivers eventually time out
