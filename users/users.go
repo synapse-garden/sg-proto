@@ -86,3 +86,24 @@ func ValidateNew(u *User) error {
 	}
 	return nil
 }
+
+// AddCoin returns a store.Mutation which adds the given amount of coin
+// to the given user.  It presumes the user already exists in the DB and
+// has a valid Name set.  It sets the given User's Coin to the new value
+// in the DB.
+func AddCoin(u *User, coin int64) store.Mutation {
+	nbs := []byte(u.Name)
+	return func(tx *bolt.Tx) error {
+		into := new(User)
+
+		err := store.Unmarshal(UserBucket, into, nbs)(tx)
+		if err != nil {
+			return err
+		}
+
+		into.Coin += coin
+		u.Coin = into.Coin
+
+		return store.Marshal(UserBucket, into, nbs)(tx)
+	}
+}
