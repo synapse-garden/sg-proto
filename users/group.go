@@ -8,6 +8,36 @@ type Group struct {
 	Writers map[string]bool `json:"writers"`
 }
 
+// DiffGroups returns a bool map where removed users' names are keys to
+// false values, and added or retained users' names are keys to true
+// values.  It is assumed all Writers are also Readers and the Owner is
+// unchanged.
+func DiffGroups(old, new Group) map[string]bool {
+	was := make(map[string]bool)
+	allOld, allNew := AllUsers(old), AllUsers(new)
+
+	for u := range allOld {
+		was[u] = allNew[u]
+	}
+	for u := range allNew {
+		was[u] = true
+	}
+
+	return was
+}
+
+// AllUsers gets a map of all users in the Group.
+func AllUsers(g Group) map[string]bool {
+	all := map[string]bool{g.Owner: true}
+	for u := range g.Readers {
+		all[u] = true
+	}
+	for u := range g.Writers {
+		all[u] = true
+	}
+	return all
+}
+
 // Filter determines Group membership.
 type Filter interface {
 	Member(Group) bool
