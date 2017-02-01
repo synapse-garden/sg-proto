@@ -26,7 +26,7 @@ func (Disconnected) Resource() store.Resource { return "convo-disconnected" }
 // has connected.
 func (c *Convo) Connected(user string) store.Resourcer {
 	return Connected{
-		UserID:   user,
+		UserID:  user,
 		ConvoID: c.ID,
 	}
 }
@@ -35,7 +35,7 @@ func (c *Convo) Connected(user string) store.Resourcer {
 // has disconnected.
 func (c *Convo) Disconnected(user string) store.Resourcer {
 	return Disconnected{
-		UserID:   user,
+		UserID:  user,
 		ConvoID: c.ID,
 	}
 }
@@ -46,3 +46,10 @@ type Deleted string
 
 // Resource implements Resourcer.Resource on Deleted.
 func (Deleted) Resource() store.Resource { return "convo-deleted" }
+
+// Removed is a Resourcer which can notify that the user has been
+// removed from the Convo without showing the user the Convo.
+type Removed string
+
+// Resource implements Resourcer.Resource on Removed.
+func (Removed) Resource() store.Resource { return "convo-removed" }
