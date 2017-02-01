@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	htt "net/http/httptest"
+	"reflect"
 	"time"
 
 	"github.com/synapse-garden/sg-proto/auth"
@@ -17,6 +18,7 @@ import (
 	"github.com/synapse-garden/sg-proto/users"
 
 	"github.com/boltdb/bolt"
+	"github.com/davecgh/go-spew/spew"
 	htr "github.com/julienschmidt/httprouter"
 	uuid "github.com/satori/go.uuid"
 	ws "golang.org/x/net/websocket"
@@ -61,21 +63,31 @@ func (s *RESTSuite) TestTaskBind(c *C) {
 	)
 
 	var (
-		r           = htr.New()
-		notifErr    = rest.Notif{DB: s.db}.Bind(r)
-		api         = &rest.Task{DB: s.db}
+		r = htr.New()
+
+		now       = time.Now()
+		someWhen  = now.Add(2 * time.Hour)
+		beforeNow = now.Add(-1 * time.Hour)
+
+		notifErr = rest.Notif{DB: s.db}.Bind(r)
+		api      = &rest.Task{DB: s.db, Timer: sgt.Timer(now)}
+
 		srv, tokens = prepTaskAPI(c, r, api, "bodie", "bob")
-		now         = time.Now()
-		someWhen    = now.Add(2 * time.Hour)
-		beforeNow   = now.Add(-1 * time.Hour)
 	)
 
 	defer srv.Close()
 	c.Assert(notifErr, IsNil)
 
 	// Get websocket connection for "bodie".
-	conn, err := sgt.GetWSClient(
+	connBodie, err := sgt.GetWSClient(
 		base64.RawURLEncoding.EncodeToString(tokens["bodie"]),
+		srv.URL+"/notifs",
+	)
+	c.Assert(err, IsNil)
+
+	// Get websocket connection for "bob".
+	connBob, err := sgt.GetWSClient(
+		base64.RawURLEncoding.EncodeToString(tokens["bob"]),
 		srv.URL+"/notifs",
 	)
 	c.Assert(err, IsNil)
@@ -168,7 +180,7 @@ func (s *RESTSuite) TestTaskBind(c *C) {
 	c.Check(got.Due.Equal(*t.Due), Equals, true)
 
 	notif := new(store.ResourceBox)
-	c.Assert(ws.JSON.Receive(conn, notif), IsNil)
+	c.Assert(ws.JSON.Receive(connBodie, notif), IsNil)
 	c.Check(notif, DeepEquals, &store.ResourceBox{
 		Name: "tasks",
 		Contents: map[string]interface{}{
@@ -193,36 +205,90 @@ func (s *RESTSuite) TestTaskBind(c *C) {
 	c.Check(w.Code, Equals, http.StatusOK)
 	gotOld := new(task.Task)
 	c.Assert(json.Unmarshal(w.Body.Bytes(), gotOld), IsNil)
-	c.Assert(ws.JSON.Receive(conn, x), IsNil)
+	c.Assert(ws.JSON.Receive(connBodie, x), IsNil)
 
 	w = htt.NewRecorder()
 	r.ServeHTTP(w, noDueReq)
 	c.Check(w.Code, Equals, http.StatusOK)
 	gotNoDue := new(task.Task)
 	c.Assert(json.Unmarshal(w.Body.Bytes(), gotNoDue), IsNil)
-	c.Assert(ws.JSON.Receive(conn, x), IsNil)
+	c.Assert(ws.JSON.Receive(connBodie, x), IsNil)
 
 	w = htt.NewRecorder()
 	r.ServeHTTP(w, doneReq)
 	c.Check(w.Code, Equals, http.StatusOK)
 	gotDone := new(task.Task)
 	c.Assert(json.Unmarshal(w.Body.Bytes(), gotDone), IsNil)
-	c.Assert(ws.JSON.Receive(conn, x), IsNil)
+	c.Assert(ws.JSON.Receive(connBodie, x), IsNil)
 
 	newGot := new(task.Task)
+
 	otherT := new(task.Task)
 	*otherT = *t
 	otherT.ID = got.ID
+	otherT.Bounty = 5
 	otherT.Notes = append(otherT.Notes, "something else")
-	otherT.Readers = map[string]bool{"bodie": true}
-	otherT.Writers = map[string]bool{"bodie": true}
+	otherT.Readers = map[string]bool{"bodie": true, "bob": true}
+	otherT.Writers = map[string]bool{"bodie": true, "bob": true}
+
+	doneGot := new(task.Task)
+	*doneGot = *otherT
+	doneGot.Completed = true
+	doneGot.Notes = append(doneGot.Notes, "another thing entirely")
+	doneDone := new(task.Task)
+	*doneDone = *doneGot
+	doneDone.CompletedBy = "bob"
+	doneDone.CompletedAt = new(time.Time)
+	*doneDone.CompletedAt = now.UTC()
 
 	badUsersT := new(task.Task)
 	*badUsersT = *t
-	badUsersT.Readers = map[string]bool{"bodie": true, "floobob": true}
-	badUsersT.Writers = map[string]bool{"bodie": true, "floobob": true}
+	badUsersT.Readers = map[string]bool{
+		"bodie":   true,
+		"floobob": true,
+	}
+	badUsersT.Writers = map[string]bool{
+		"bodie":   true,
+		"floobob": true,
+	}
 
 	c.Logf("POST succeeded: new ID [% x]", got.ID)
+
+	c.Log("Should POST new task with two users and notify both, then delete")
+	sendMultiNotif := &task.Task{
+		Group: users.Group{
+			Owner:   "bodie",
+			Readers: map[string]bool{"bodie": true, "bob": true},
+			Writers: map[string]bool{"bodie": true, "bob": true},
+		},
+		Name: "a test",
+	}
+	sendMultiNotifBs, err := json.Marshal(sendMultiNotif)
+	c.Assert(err, IsNil)
+	multiNotifReq := htt.NewRequest("POST", "/tasks", bytes.NewBuffer(sendMultiNotifBs))
+	multiNotifReq.Header = sgt.Bearer(tokens["bodie"])
+
+	w = htt.NewRecorder()
+	r.ServeHTTP(w, multiNotifReq)
+	c.Check(w.Code, Equals, http.StatusOK)
+	multiNotifGot := new(task.Task)
+	c.Assert(json.Unmarshal(w.Body.Bytes(), multiNotifGot), IsNil)
+	c.Assert(uuid.Equal(uuid.UUID(multiNotifGot.ID), uuid.Nil), Equals, false)
+	sendMultiNotif.ID = multiNotifGot.ID
+	c.Check(multiNotifGot, DeepEquals, sendMultiNotif)
+	c.Assert(ws.JSON.Receive(connBodie, x), IsNil)
+	c.Check((*x)["name"], Equals, "tasks")
+	c.Assert(ws.JSON.Receive(connBob, x), IsNil)
+	c.Check((*x)["name"], Equals, "tasks")
+	delReq := htt.NewRequest("DELETE", "/tasks/"+uuid.UUID(multiNotifGot.ID).String(), nil)
+	delReq.Header = sgt.Bearer(tokens["bodie"])
+	w = htt.NewRecorder()
+	r.ServeHTTP(w, delReq)
+	c.Check(w.Code, Equals, http.StatusOK)
+	c.Assert(ws.JSON.Receive(connBodie, x), IsNil)
+	c.Check((*x)["name"], Equals, "task-deleted")
+	c.Assert(ws.JSON.Receive(connBob, x), IsNil)
+	c.Check((*x)["name"], Equals, "task-deleted")
 
 	for i, test := range []struct {
 		should string
@@ -233,7 +299,7 @@ func (s *RESTSuite) TestTaskBind(c *C) {
 		expectStatus     int
 		into, expectResp interface{}
 
-		expectNotif *store.ResourceBox
+		expectNotifs map[*ws.Conn][]*store.ResourceBox
 	}{{
 		should: "return [] when none exist for user",
 		verb:   "GET", path: "/tasks",
@@ -310,11 +376,11 @@ func (s *RESTSuite) TestTaskBind(c *C) {
 		should: "forbid creation of tasks for wrong users",
 		verb:   "POST", path: "/tasks",
 		header:       sgt.Bearer(tokens["bob"]),
-		expectStatus: http.StatusUnauthorized,
+		expectStatus: http.StatusBadRequest,
 		body:         t,
 		into:         new(string),
-		expectResp: "user `bob` cannot create task for user " +
-			"`bodie`\n",
+		expectResp: "invalid Task: user `bob` cannot create " +
+			"task for user `bodie`\n",
 	}, {
 		should: "forbid creation of tasks with nonexistent users",
 		verb:   "POST", path: "/tasks",
@@ -333,8 +399,9 @@ func (s *RESTSuite) TestTaskBind(c *C) {
 		into:         new(string),
 		expectResp:   "invalid task ID\n",
 	}, {
-		should: "reject bad PUT body",
-		verb:   "PUT", path: "/tasks/" + uuid.UUID(got.ID).String(),
+		should:       "reject bad body",
+		verb:         "PUT",
+		path:         "/tasks/" + uuid.UUID(got.ID).String(),
 		header:       sgt.Bearer(tokens["bodie"]),
 		expectStatus: http.StatusBadRequest,
 		body:         "woops",
@@ -342,13 +409,26 @@ func (s *RESTSuite) TestTaskBind(c *C) {
 		expectResp: "bad body: json: cannot unmarshal string " +
 			"into Go value of type task.Task\n",
 	}, {
-		should: "reject unauthorized task owner",
-		verb:   "PUT", path: "/tasks/boop",
-		header:       sgt.Bearer(tokens["bodie"]),
+		should: "reject invalid PUT updates (user not owner " +
+			"or writer)",
+		verb:         "PUT",
+		path:         "/tasks/" + uuid.UUID(got.ID).String(),
+		header:       sgt.Bearer(tokens["bob"]),
 		expectStatus: http.StatusBadRequest,
-		body:         t,
+		body:         badUsersT,
 		into:         new(string),
-		expectResp:   "invalid task ID\n",
+		expectResp: "invalid task: `bob` is not owner or in " +
+			"writers\n",
+	}, {
+		should:       "forbid update of tasks with nonexistent users",
+		verb:         "PUT",
+		path:         "/tasks/" + uuid.UUID(got.ID).String(),
+		header:       sgt.Bearer(tokens["bodie"]),
+		expectStatus: http.StatusNotFound,
+		body:         badUsersT,
+		into:         new(string),
+		expectResp: "failed to check Task: user `floobob` " +
+			"not found\n",
 	}, {
 		should: "return 404 for nonexistent tasks",
 		verb:   "PUT", path: "/tasks/" + uuid.Nil.String(),
@@ -358,39 +438,241 @@ func (s *RESTSuite) TestTaskBind(c *C) {
 		into:         new(string),
 		expectResp:   "no such task\n",
 	}, {
-		should: "forbid update of tasks with nonexistent users",
-		verb:   "POST", path: "/tasks",
-		header:       sgt.Bearer(tokens["bodie"]),
-		expectStatus: http.StatusNotFound,
-		body:         badUsersT,
-		into:         new(string),
-		expectResp: "failed to check Task: user `floobob` " +
-			"not found\n",
-	}, {
-		should: "reject unauthorized update",
-		verb:   "PUT", path: "/tasks/" + uuid.UUID(got.ID).String(),
+		should:       "reject unauthorized update",
+		verb:         "PUT",
+		path:         "/tasks/" + uuid.UUID(got.ID).String(),
 		header:       sgt.Bearer(tokens["bob"]),
 		expectStatus: http.StatusUnauthorized,
 		body:         otherT,
 		into:         new(string),
-		expectResp: "user `bob` cannot update task for user " +
-			"`bodie`\n",
+		expectResp:   "Unauthorized\n",
 	}, {
-		should: "update a task as expected",
-		verb:   "PUT", path: "/tasks/" + uuid.UUID(got.ID).String(),
+		should:       "update a task as expected",
+		verb:         "PUT",
+		path:         "/tasks/" + uuid.UUID(got.ID).String(),
 		header:       sgt.Bearer(tokens["bodie"]),
 		expectStatus: http.StatusOK,
 		body:         otherT,
 		into:         newGot,
 		expectResp:   otherT,
-		expectNotif: &store.ResourceBox{
+		expectNotifs: map[*ws.Conn][]*store.ResourceBox{connBob: {{
 			Name: "tasks",
 			Contents: map[string]interface{}{
-				"owner":   "bodie",
-				"readers": map[string]interface{}{"bodie": true},
-				"writers": map[string]interface{}{"bodie": true},
-				"id":      uuid.UUID(got.ID).String(),
-				"name":    "V. Important Task",
+				"owner": "bodie",
+				"readers": map[string]interface{}{
+					"bodie": true,
+					"bob":   true,
+				},
+				"writers": map[string]interface{}{
+					"bodie": true,
+					"bob":   true,
+				},
+				"id":   uuid.UUID(got.ID).String(),
+				"name": "V. Important Task",
+				"notes": []interface{}{
+					"hello world",
+					"goodbye world",
+					"something else",
+				},
+				"bounty":    float64(5),
+				"due":       someWhen.Format(time.RFC3339Nano),
+				"completed": false,
+			},
+		}}, connBodie: {{
+			Name: "tasks",
+			Contents: map[string]interface{}{
+				"owner": "bodie",
+				"readers": map[string]interface{}{
+					"bodie": true,
+					"bob":   true,
+				},
+				"writers": map[string]interface{}{
+					"bodie": true,
+					"bob":   true,
+				},
+				"id":   uuid.UUID(got.ID).String(),
+				"name": "V. Important Task",
+				"notes": []interface{}{
+					"hello world",
+					"goodbye world",
+					"something else",
+				},
+				"bounty":    float64(5),
+				"due":       someWhen.Format(time.RFC3339Nano),
+				"completed": false,
+			},
+		}}},
+	}, {
+		should:       "complete a task with a bounty as expected",
+		verb:         "PUT",
+		path:         "/tasks/" + uuid.UUID(doneGot.ID).String(),
+		header:       sgt.Bearer(tokens["bob"]),
+		expectStatus: http.StatusOK,
+		body:         doneGot,
+		into:         new(task.Task),
+		expectResp:   doneDone,
+		expectNotifs: map[*ws.Conn][]*store.ResourceBox{connBodie: {{
+			Name: "tasks",
+			Contents: map[string]interface{}{
+				"owner":  "bodie",
+				"bounty": float64(5),
+				"readers": map[string]interface{}{
+					"bodie": true,
+					"bob":   true,
+				},
+				"writers": map[string]interface{}{
+					"bodie": true,
+					"bob":   true,
+				},
+				"id":   uuid.UUID(got.ID).String(),
+				"name": "V. Important Task",
+				"notes": []interface{}{
+					"hello world",
+					"goodbye world",
+					"something else",
+					"another thing entirely",
+				},
+				"due":         someWhen.Format(time.RFC3339Nano),
+				"completed":   true,
+				"completedBy": "bob",
+				"completedAt": now.UTC().Format(time.RFC3339Nano),
+			},
+		}, {
+			Name: "users",
+			Contents: map[string]interface{}{
+				"name": "bodie",
+				"coin": float64(-5),
+			},
+		}}, connBob: {{
+			Name: "tasks",
+			Contents: map[string]interface{}{
+				"owner":  "bodie",
+				"bounty": float64(5),
+				"readers": map[string]interface{}{
+					"bodie": true,
+					"bob":   true,
+				},
+				"writers": map[string]interface{}{
+					"bodie": true,
+					"bob":   true,
+				},
+				"id":   uuid.UUID(got.ID).String(),
+				"name": "V. Important Task",
+				"notes": []interface{}{
+					"hello world",
+					"goodbye world",
+					"something else",
+					"another thing entirely",
+				},
+				"due":         someWhen.Format(time.RFC3339Nano),
+				"completed":   true,
+				"completedBy": "bob",
+				"completedAt": now.UTC().Format(time.RFC3339Nano),
+			},
+		}, {
+			Name: "users",
+			Contents: map[string]interface{}{
+				"name": "bob",
+				"coin": float64(5),
+			},
+		}}},
+	}, {
+		should: "not let anyone update bounty of completed tasks",
+		verb:   "PUT",
+		path:   "/tasks/" + uuid.UUID(got.ID).String(),
+		body: func() *task.Task {
+			t := *doneDone
+			t.Bounty = 3
+			return &t
+		}(),
+		header:       sgt.Bearer(tokens["bodie"]),
+		expectStatus: http.StatusBadRequest,
+		into:         new(string),
+		expectResp:   "cannot modify bounty of complete task\n",
+	}, {
+		should: "not let anyone update due date of completed tasks",
+		verb:   "PUT",
+		path:   "/tasks/" + uuid.UUID(got.ID).String(),
+		body: func() *task.Task {
+			t := *doneDone
+			t.Due = &beforeNow
+			return &t
+		}(),
+		header:       sgt.Bearer(tokens["bodie"]),
+		expectStatus: http.StatusBadRequest,
+		into:         new(string),
+		expectResp:   "cannot modify due date of complete task\n",
+	}, {
+		should: "not let anyone update completed-by of completed tasks",
+		verb:   "PUT",
+		path:   "/tasks/" + uuid.UUID(got.ID).String(),
+		body: func() *task.Task {
+			t := *doneDone
+			t.CompletedBy = ""
+			return &t
+		}(),
+		header:       sgt.Bearer(tokens["bodie"]),
+		expectStatus: http.StatusBadRequest,
+		into:         new(string),
+		expectResp:   "cannot modify completed-by of complete task\n",
+	}, {
+		should: "not let anyone update completed-at of completed tasks",
+		verb:   "PUT",
+		path:   "/tasks/" + uuid.UUID(got.ID).String(),
+		body: func() *task.Task {
+			t := *doneDone
+			t.CompletedAt = &someWhen
+			return &t
+		}(),
+		header:       sgt.Bearer(tokens["bodie"]),
+		expectStatus: http.StatusBadRequest,
+		into:         new(string),
+		expectResp:   "cannot modify completed-at of complete task\n",
+	}, {
+		should: "not let anyone update due date of completed tasks",
+		verb:   "PUT",
+		path:   "/tasks/" + uuid.UUID(got.ID).String(),
+		body: func() *task.Task {
+			t := *doneDone
+			t.Due = &beforeNow
+			return &t
+		}(),
+		header:       sgt.Bearer(tokens["bodie"]),
+		expectStatus: http.StatusBadRequest,
+		into:         new(string),
+		expectResp:   "cannot modify due date of complete task\n",
+	}, {
+		should:       "get updated task as expected",
+		verb:         "GET",
+		path:         "/tasks/" + uuid.UUID(got.ID).String(),
+		header:       sgt.Bearer(tokens["bodie"]),
+		expectStatus: http.StatusOK,
+		into:         new(task.Task),
+		expectResp:   doneDone,
+	}, {
+		should:       "uncomplete a task with a bounty as expected",
+		verb:         "PUT",
+		path:         "/tasks/" + uuid.UUID(doneGot.ID).String(),
+		header:       sgt.Bearer(tokens["bob"]),
+		expectStatus: http.StatusOK,
+		body:         otherT,
+		into:         new(task.Task),
+		expectResp:   otherT,
+		expectNotifs: map[*ws.Conn][]*store.ResourceBox{connBodie: {{
+			Name: "tasks",
+			Contents: map[string]interface{}{
+				"owner":  "bodie",
+				"bounty": float64(5),
+				"readers": map[string]interface{}{
+					"bodie": true,
+					"bob":   true,
+				},
+				"writers": map[string]interface{}{
+					"bodie": true,
+					"bob":   true,
+				},
+				"id":   uuid.UUID(got.ID).String(),
+				"name": "V. Important Task",
 				"notes": []interface{}{
 					"hello world",
 					"goodbye world",
@@ -399,14 +681,182 @@ func (s *RESTSuite) TestTaskBind(c *C) {
 				"due":       someWhen.Format(time.RFC3339Nano),
 				"completed": false,
 			},
-		},
+		}, {
+			Name: "users",
+			Contents: map[string]interface{}{
+				"name": "bodie",
+				"coin": float64(0),
+			},
+		}}, connBob: {{
+			Name: "tasks",
+			Contents: map[string]interface{}{
+				"owner":  "bodie",
+				"bounty": float64(5),
+				"readers": map[string]interface{}{
+					"bodie": true,
+					"bob":   true,
+				},
+				"writers": map[string]interface{}{
+					"bodie": true,
+					"bob":   true,
+				},
+				"id":   uuid.UUID(got.ID).String(),
+				"name": "V. Important Task",
+				"notes": []interface{}{
+					"hello world",
+					"goodbye world",
+					"something else",
+				},
+				"due":       someWhen.Format(time.RFC3339Nano),
+				"completed": false,
+			},
+		}, {
+			Name: "users",
+			Contents: map[string]interface{}{
+				"name": "bob",
+				"coin": float64(0),
+			},
+		}}},
 	}, {
-		should: "get updated task as expected",
-		verb:   "GET", path: "/tasks/" + uuid.UUID(got.ID).String(),
+		should:       "update a task as a writer normally",
+		verb:         "PUT",
+		path:         "/tasks/" + uuid.UUID(doneGot.ID).String(),
+		header:       sgt.Bearer(tokens["bob"]),
+		expectStatus: http.StatusOK,
+		body: func() *task.Task {
+			tt := *otherT
+			tt.Notes = make([]string, len(tt.Notes))
+			copy(tt.Notes, otherT.Notes)
+			tt.Notes = append(tt.Notes, "boopy doopy")
+			return &tt
+		}(),
+		into: new(task.Task),
+		expectResp: func() *task.Task {
+			tt := *otherT
+			tt.Notes = make([]string, len(tt.Notes))
+			copy(tt.Notes, otherT.Notes)
+			tt.Notes = append(tt.Notes, "boopy doopy")
+			return &tt
+		}(),
+		expectNotifs: map[*ws.Conn][]*store.ResourceBox{connBodie: {{
+			Name: "tasks",
+			Contents: map[string]interface{}{
+				"owner":  "bodie",
+				"bounty": float64(5),
+				"readers": map[string]interface{}{
+					"bodie": true,
+					"bob":   true,
+				},
+				"writers": map[string]interface{}{
+					"bodie": true,
+					"bob":   true,
+				},
+				"id":   uuid.UUID(got.ID).String(),
+				"name": "V. Important Task",
+				"notes": []interface{}{
+					"hello world",
+					"goodbye world",
+					"something else",
+					"boopy doopy",
+				},
+				"due":       someWhen.Format(time.RFC3339Nano),
+				"completed": false,
+			},
+		}}, connBob: {{
+			Name: "tasks",
+			Contents: map[string]interface{}{
+				"owner":  "bodie",
+				"bounty": float64(5),
+				"readers": map[string]interface{}{
+					"bodie": true,
+					"bob":   true,
+				},
+				"writers": map[string]interface{}{
+					"bodie": true,
+					"bob":   true,
+				},
+				"id":   uuid.UUID(got.ID).String(),
+				"name": "V. Important Task",
+				"notes": []interface{}{
+					"hello world",
+					"goodbye world",
+					"something else",
+					"boopy doopy",
+				},
+				"due":       someWhen.Format(time.RFC3339Nano),
+				"completed": false,
+			},
+		}}},
+	}, {
+		should:       "complete a task as an owner normally",
+		verb:         "PUT",
+		path:         "/tasks/" + uuid.UUID(doneGot.ID).String(),
 		header:       sgt.Bearer(tokens["bodie"]),
 		expectStatus: http.StatusOK,
-		into:         new(task.Task),
-		expectResp:   otherT,
+		body: func() *task.Task {
+			tt := *otherT
+			tt.Completed = true
+			return &tt
+		}(),
+		into: new(task.Task),
+		expectResp: func() *task.Task {
+			tt := *otherT
+			tt.Completed = true
+			tt.CompletedAt = &now
+			tt.CompletedBy = "bodie"
+			return &tt
+		}(),
+		expectNotifs: map[*ws.Conn][]*store.ResourceBox{connBodie: {{
+			Name: "tasks",
+			Contents: map[string]interface{}{
+				"owner":  "bodie",
+				"bounty": float64(5),
+				"readers": map[string]interface{}{
+					"bodie": true,
+					"bob":   true,
+				},
+				"writers": map[string]interface{}{
+					"bodie": true,
+					"bob":   true,
+				},
+				"id":   uuid.UUID(got.ID).String(),
+				"name": "V. Important Task",
+				"notes": []interface{}{
+					"hello world",
+					"goodbye world",
+					"something else",
+				},
+				"due":         someWhen.Format(time.RFC3339Nano),
+				"completed":   true,
+				"completedBy": "bodie",
+				"completedAt": now.Format(time.RFC3339Nano),
+			},
+		}}, connBob: {{
+			Name: "tasks",
+			Contents: map[string]interface{}{
+				"owner":  "bodie",
+				"bounty": float64(5),
+				"readers": map[string]interface{}{
+					"bodie": true,
+					"bob":   true,
+				},
+				"writers": map[string]interface{}{
+					"bodie": true,
+					"bob":   true,
+				},
+				"id":   uuid.UUID(got.ID).String(),
+				"name": "V. Important Task",
+				"notes": []interface{}{
+					"hello world",
+					"goodbye world",
+					"something else",
+				},
+				"due":         someWhen.Format(time.RFC3339Nano),
+				"completed":   true,
+				"completedBy": "bodie",
+				"completedAt": now.Format(time.RFC3339Nano),
+			},
+		}}},
 	}, {
 		should:       "return error on bad task ID",
 		verb:         "DELETE",
@@ -439,10 +889,13 @@ func (s *RESTSuite) TestTaskBind(c *C) {
 		expectStatus: http.StatusOK,
 		into:         new(string),
 		expectResp:   "",
-		expectNotif: &store.ResourceBox{
+		expectNotifs: map[*ws.Conn][]*store.ResourceBox{connBodie: {{
 			Name:     "task-deleted",
 			Contents: uuid.UUID(got.ID).String(),
-		},
+		}}, connBob: {{
+			Name:     "task-deleted",
+			Contents: uuid.UUID(got.ID).String(),
+		}}},
 	}, {
 		should:       "not get deleted tasks",
 		verb:         "GET",
@@ -464,14 +917,49 @@ func (s *RESTSuite) TestTaskBind(c *C) {
 			test.header,
 		), IsNil)
 
-		if e := test.expectNotif; e != nil {
-			notif := new(store.ResourceBox)
-			c.Assert(ws.JSON.Receive(conn, notif), IsNil)
-			c.Check(notif, DeepEquals, e)
+		for conn, expects := range test.expectNotifs {
+			// Check that the given user's notif conn
+			// received the expected notifs.
+
+			// ns starts as a copy of expected notifs, and
+			// each is removed from 'ns' when it is found;
+			// ns should be empty at the end of the loop.
+			ns := expects
+			var saw []*store.ResourceBox
+			for _ = range expects {
+				// Note this will not account for
+				// unexpected notifs, but they will
+				// cause problems later...
+				notif := new(store.ResourceBox)
+				c.Assert(ws.JSON.Receive(conn, notif), IsNil)
+				saw = append(saw, notif)
+			find:
+				for j, n := range ns {
+					// Was that one of the expected notifs?
+					if reflect.DeepEqual(notif, n) {
+						// If found, remove from expected
+						// by re-slicing and stop search.
+						ns = append(ns[:j], ns[j+1:]...)
+						break find
+					}
+				}
+			}
+
+			c.Check(len(ns), Equals, 0)
+			if c.Failed() {
+				c.Logf("expected notifs: %s\n"+
+					"  but never saw %s\n"+
+					"  got %s\n",
+					spew.Sdump(expects),
+					spew.Sdump(ns),
+					spew.Sdump(saw),
+				)
+			}
 		}
 	}
 
-	c.Assert(conn.Close(), IsNil)
+	c.Assert(connBodie.Close(), IsNil)
+	c.Assert(connBob.Close(), IsNil)
 
 	cleanupTaskAPI(c, api)
 }
