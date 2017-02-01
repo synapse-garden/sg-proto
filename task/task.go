@@ -23,7 +23,9 @@ type Task struct {
 
 	Bounty int64 `json:"bounty,omitempty"`
 
-	Completed bool `json:"completed"`
+	Completed   bool       `json:"completed"`
+	CompletedBy string     `json:"completedBy,omitempty"`
+	CompletedAt *time.Time `json:"completedAt,omitempty"`
 
 	Due *time.Time `json:"due,omitempty"`
 
