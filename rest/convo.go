@@ -11,7 +11,6 @@ import (
 	mw "github.com/synapse-garden/sg-proto/rest/middleware"
 	"github.com/synapse-garden/sg-proto/rest/ws"
 	"github.com/synapse-garden/sg-proto/store"
-	"github.com/synapse-garden/sg-proto/stream"
 	"github.com/synapse-garden/sg-proto/stream/river"
 	"github.com/synapse-garden/sg-proto/users"
 	"github.com/synapse-garden/sg-proto/util"
@@ -456,12 +455,9 @@ func (c Convo) Put(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	allUsers := make([]string, len(str.Readers)+len(str.Writers)+1)
 	allUsers[0] = userID
 
-	updateUsers := map[string]bool{userID: true}
-
 	next := 1
 	for r := range str.Readers {
 		allUsers[next] = r
-		updateUsers[r] = true
 		next++
 	}
 	for w := range str.Writers {
@@ -505,12 +501,7 @@ func (c Convo) Put(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		return
 	}
 
-	// Go through the old Readers.  If that user wasn't in the new
-	// users map, it gets inserted as a false value.
-	for r := range existing.Readers {
-		ok := updateUsers[r]
-		updateUsers[r] = ok
-	}
+	updateUsers := users.DiffGroups(existing.Group, str.Group)
 
 	// Hang up Convo users.  If this fails, don't delete the convo.
 	// The owner can retry the delete.
@@ -607,7 +598,7 @@ hangupRemoved:
 		if ok {
 			err = notif.Encode(c.Pub, str, topic)
 		} else {
-			err = notif.Encode(c.Pub, stream.Removed(id), topic)
+			err = notif.Encode(c.Pub, convo.Removed(id), topic)
 		}
 		if err != nil {
 			log.Printf("failed to notify user %q of convo update", u)
