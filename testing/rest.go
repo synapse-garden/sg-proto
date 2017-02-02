@@ -4,21 +4,37 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	htt "net/http/httptest"
 	"reflect"
 
+	"github.com/synapse-garden/sg-proto/auth"
+	mw "github.com/synapse-garden/sg-proto/rest/middleware"
+
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
-	"github.com/synapse-garden/sg-proto/auth"
 )
+
+func makeAuthHeader(kind auth.TokenType, token auth.Token) http.Header {
+	return http.Header{string(mw.AuthHeader): []string{
+		fmt.Sprintf(
+			"%s %s",
+			kind, base64.StdEncoding.EncodeToString(token),
+		),
+	}}
+}
 
 // Bearer returns the appropriate Authorization Header for the given
 // Bearer token.
 func Bearer(token auth.Token) http.Header {
-	return http.Header{"Authorization": []string{
-		"Bearer " + base64.StdEncoding.EncodeToString(token),
-	}}
+	return makeAuthHeader(auth.BearerType, token)
+}
+
+// Admin returns the appropriate Authorization Header for the given
+// Admin token.
+func Admin(token auth.Token) http.Header {
+	return makeAuthHeader(auth.AdminType, token)
 }
 
 // WSAuthProtocols returns the websocket Auth Protocol to be passed for
@@ -54,8 +70,8 @@ func ExpectResponse(
 
 	if c := w.Code; c != code {
 		return errors.Errorf(
-			"unexpected response code %d with body %#q",
-			c, spew.Sdump(w.Body),
+			"unexpected response code %d (%q) with body %#q",
+			c, http.StatusText(c), spew.Sdump(w.Body),
 		)
 	}
 
