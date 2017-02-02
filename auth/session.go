@@ -53,6 +53,12 @@ func (t Token) String() string {
 	return base64.StdEncoding.EncodeToString([]byte(t))
 }
 
+type ErrInvalidTokenType string
+
+func (e ErrInvalidTokenType) Error() string {
+	return fmt.Sprintf("invalid token type %q", string(e))
+}
+
 type ErrMissingSession []byte
 
 func (e ErrMissingSession) Error() string {
