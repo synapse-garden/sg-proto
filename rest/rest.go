@@ -79,16 +79,17 @@ func Bind(
 	htr := httprouter.New()
 	for _, api := range []API{
 		source,
-		Admin{Token: apiKey, DB: db},
 		Incept{DB: db},
 		Token{DB: db},
 		Profile{DB: db},
-		Notif{DB: db},
 		// Note that notifying APIs must be references since the
 		// notif connect sets a Pub socket handle in the struct.
 		&Stream{DB: db},
 		&Convo{DB: db},
 		&Task{DB: db},
+		&Admin{Token: apiKey, DB: db},
+		// Connect Notif last so Pubs are already registered.
+		Notif{DB: db},
 	} {
 		if err := api.Bind(htr); err != nil {
 			return nil, err
