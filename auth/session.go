@@ -211,21 +211,15 @@ func NewSession(
 			}
 		}()
 
-		err = store.Marshal(SessionBucket, s, s.Token)(tx)
-		if err != nil {
-			return
-		}
-
-		err = SaveContext(&Context{
-			Token:        s.Token,
-			RefreshToken: s.RefreshToken,
-			UserID:       userID,
-		})(tx)
-		if err != nil {
-			return
-		}
-
-		return store.Put(RefreshBucket, s.RefreshToken, nil)(tx)
+		return store.Wrap(
+			store.Marshal(SessionBucket, s, s.Token),
+			SaveContext(&Context{
+				Token:        s.Token,
+				RefreshToken: s.RefreshToken,
+				UserID:       userID,
+			}),
+			store.Put(RefreshBucket, s.RefreshToken, nil),
+		)(tx)
 	}
 }
 
