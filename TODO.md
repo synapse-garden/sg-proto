@@ -264,7 +264,8 @@
 
 - [x] AuthAdmin middleware
 - [x] Create ticket
-- [ ] PATCH /admin/users/
+- [x] PATCH /admin/profiles/:id?addCoin=(-)12345
+- [x] POST /admin/profiles users.User to create User without Ticket
 - [ ] GET /tickets?per_page=n&page=m
 - [x] Delete ticket(s)
 - [x] Master API key printed on startup?
