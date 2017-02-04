@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/json"
-	"fmt"
 
 	"github.com/synapse-garden/sg-proto/store"
 	"github.com/synapse-garden/sg-proto/users"
@@ -23,18 +22,6 @@ type Login struct {
 	PWHash []byte    `json:"pwhash"`
 	Salt   uuid.UUID `json:"salt"`
 }
-
-type ErrExists string
-
-func (e ErrExists) Error() string { return fmt.Sprintf("login for user %#q already exists", string(e)) }
-
-type ErrMissing string
-
-func (e ErrMissing) Error() string { return fmt.Sprintf("login for user %#q not found", string(e)) }
-
-type ErrInvalid string
-
-func (e ErrInvalid) Error() string { return fmt.Sprintf("invalid login for user %#q", string(e)) }
 
 func CheckLoginExists(l *Login) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
