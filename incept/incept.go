@@ -93,10 +93,11 @@ func Incept(
 	db *bolt.DB,
 ) error {
 	user := &(l.User)
+	name := user.Name
 	// Check if given ticket exists (nil => it exists)
 	if err := db.View(store.Wrap(
 		CheckTicketExist(key),
-		users.CheckUserNotExist(user),
+		users.CheckNotExist(name),
 		auth.CheckLoginNotExist(l),
 	)); err != nil {
 		return err
@@ -104,10 +105,34 @@ func Incept(
 	// Create user or fail
 	if err := db.Update(store.Wrap(
 		CheckTicketExist(key),
-		users.CheckUserNotExist(user),
+		users.CheckNotExist(name),
 		auth.CheckLoginNotExist(l),
 		PunchTicket(key),
-		users.Create(&(l.User)),
+		users.Create(user),
+		auth.Create(l, uuid.NewV4()),
+	)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// InceptNoTicket is a method for admins to create a user without
+// punching a Ticket.
+func InceptNoTicket(l *auth.Login, db *bolt.DB) error {
+	user := &(l.User)
+	if err := db.View(store.Wrap(
+		users.CheckNotExist(user.Name),
+		auth.CheckLoginNotExist(l),
+	)); err != nil {
+		return err
+	}
+
+	// Create user or fail
+	if err := db.Update(store.Wrap(
+		users.CheckNotExist(user.Name),
+		auth.CheckLoginNotExist(l),
+		users.Create(user),
 		auth.Create(l, uuid.NewV4()),
 	)); err != nil {
 		return err

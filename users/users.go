@@ -56,13 +56,15 @@ func CheckUsersExist(names ...string) func(*bolt.Tx) error {
 	}
 }
 
-func CheckUserNotExist(u *User) func(*bolt.Tx) error {
-	return func(tx *bolt.Tx) error {
-		err := store.CheckNotExist(UserBucket, []byte(u.Name))(tx)
-		if store.IsExists(err) {
-			return ErrExists(u.Name)
+func CheckNotExist(names ...string) func(*bolt.Tx) error {
+	return func(tx *bolt.Tx) (e error) {
+		for _, name := range names {
+			e = store.CheckNotExist(UserBucket, []byte(name))(tx)
+			if store.IsExists(e) {
+				return ErrExists(name)
+			}
 		}
-		return err
+		return
 	}
 }
 
