@@ -72,6 +72,8 @@ func (a *Admin) Bind(r *htr.Router) error {
 	r.POST("/admin/tickets", mw.AuthAdmin(a.NewTicket, db))
 	// PATCH /admin/profiles/bodie?addCoin=1000 (or -1000)
 	r.PATCH("/admin/profiles/:id", mw.AuthAdmin(a.PatchProfile, db))
+	// POST a new Login with corresponding User.
+	r.POST("/admin/logins", mw.AuthAdmin(a.NewLogin, db))
 	r.DELETE("/admin/tickets/:ticket", mw.AuthAdmin(a.DeleteTicket, db))
 
 	return nil
@@ -184,6 +186,33 @@ func (a Admin) PatchProfile(w http.ResponseWriter, r *http.Request, ps htr.Param
 
 	notif.Encode(a.Pub, u, notif.MakeUserTopic(u.Name))
 	json.NewEncoder(w).Encode(u)
+}
+
+// NewLogin allows an Admin to create a new Login without punching a
+// Ticket.
+func (a Admin) NewLogin(w http.ResponseWriter, r *http.Request, _ htr.Params) {
+	l := new(auth.Login)
+	if err := json.NewDecoder(r.Body).Decode(l); err != nil {
+		http.Error(w, errors.Wrap(
+			err, "failed to parse Login",
+		).Error(), http.StatusBadRequest)
+		return
+	}
+
+	err := incept.InceptNoTicket(l, a.DB)
+	switch {
+	case users.IsExists(err):
+		http.Error(w, err.Error(), http.StatusConflict)
+		return
+	case auth.IsExists(err):
+		http.Error(w, err.Error(), http.StatusConflict)
+		return
+	case err != nil:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(l.User)
 }
 
 func (a Admin) DeleteTicket(w http.ResponseWriter, r *http.Request, ps htr.Params) {

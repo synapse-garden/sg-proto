@@ -1,7 +1,9 @@
 package rest_test
 
 import (
+	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"net/http"
 	htt "net/http/httptest"
 	"reflect"
@@ -39,6 +41,8 @@ func prepAdminAPI(c *C,
 	}
 
 	c.Assert(api.Bind(r), IsNil)
+	c.Assert(rest.Token{api.DB}.Bind(r), IsNil)
+	c.Assert(rest.Profile{api.DB}.Bind(r), IsNil)
 
 	// Make a testing server to run it.
 	return htt.NewServer(r), tokens
@@ -51,12 +55,143 @@ func cleanupAdminAPI(c *C, api *rest.Admin) {
 	}), IsNil)
 }
 
-func (s *RESTSuite) TestAdminPatchProfile(c *C) {
+func (s *RESTSuite) TestAdminNilDB(c *C) {
 	c.Assert(
 		new(rest.Admin).Bind(htr.New()),
 		ErrorMatches,
 		"Admin DB handle must not be nil",
 	)
+}
+
+func (s *RESTSuite) TestAdminNewLoginErrors(c *C) {
+	var (
+		tokenUUID   = uuid.NewV4()
+		adminKey    = auth.Token(tokenUUID[:])
+		api         = &rest.Admin{Token: adminKey, DB: s.db}
+		r           = htr.New()
+		srv, tokens = prepAdminAPI(c, r, api, "bob", "bodie")
+	)
+	defer srv.Close()
+
+	for i, test := range []struct {
+		should string
+
+		verb, path       string
+		header           http.Header
+		body             interface{}
+		expectStatus     int
+		into, expectResp interface{}
+	}{{
+		should: "reject non-admin token",
+		verb:   "POST", path: "/admin/logins",
+		header:       sgt.Bearer(tokens["bodie"]),
+		expectStatus: http.StatusBadRequest,
+		into:         new(string),
+		expectResp: `invalid "Admin" token provided in ` +
+			`header "Authorization"` + "\n",
+	}, {
+		should: "reject bad admin token",
+		verb:   "POST", path: "/admin/logins",
+		header:       sgt.Admin(auth.Token("haha")),
+		expectStatus: http.StatusUnauthorized,
+		into:         new(string),
+		expectResp:   "no such admin token `haha`\n",
+	}, {
+		should: "reject wrong HTTP method",
+		verb:   "GET", path: "/admin/logins",
+		header:       sgt.Admin(adminKey),
+		expectStatus: http.StatusMethodNotAllowed,
+		into:         new(string),
+		expectResp:   "Method Not Allowed\n",
+	}, {
+		should: "error on bad body",
+		verb:   "POST", path: "/admin/logins",
+		header:       sgt.Admin(adminKey),
+		body:         "hi",
+		expectStatus: http.StatusBadRequest,
+		into:         new(string),
+		expectResp: "failed to parse Login: " +
+			"json: cannot unmarshal string into Go " +
+			"value of type auth.Login\n",
+	}, {
+		should: "error on existing User",
+		verb:   "POST", path: "/admin/logins",
+		header: sgt.Admin(adminKey),
+		body: &auth.Login{User: users.User{
+			Name: "bob",
+		}},
+		expectStatus: http.StatusConflict,
+		into:         new(string),
+		expectResp:   "user `bob` already exists\n",
+	}} {
+		c.Logf("test %d: %s on %s should %s", i,
+			test.verb, test.path,
+			test.should,
+		)
+		c.Assert(sgt.ExpectResponse(r,
+			test.path, test.verb, test.body,
+			test.into, test.expectResp,
+			test.expectStatus,
+			test.header,
+		), IsNil)
+	}
+
+	cleanupAdminAPI(c, api)
+}
+
+func (s *RESTSuite) TestAdminNewLoginWorks(c *C) {
+	var (
+		tokenUUID = uuid.NewV4()
+		adminKey  = auth.Token(tokenUUID[:])
+		api       = &rest.Admin{Token: adminKey, DB: s.db}
+		r         = htr.New()
+		srv, _    = prepAdminAPI(c, r, api)
+
+		intoUser    = new(users.User)
+		intoSession = new(auth.Session)
+	)
+	defer srv.Close()
+
+	newLogin := &auth.Login{
+		User:   users.User{Name: "bodo"},
+		PWHash: sgt.Sha256("hello"),
+	}
+	c.Log("  should be able to create new Login")
+	c.Assert(sgt.ExpectResponse(r,
+		"/admin/logins", "POST",
+		newLogin, intoUser, &(newLogin.User),
+		http.StatusOK,
+		sgt.Admin(adminKey),
+	), IsNil)
+
+	c.Log("  new User can create a session token")
+	var rdr *bytes.Buffer
+	send, err := json.Marshal(newLogin)
+	c.Assert(err, IsNil)
+	rdr = bytes.NewBuffer(send)
+	req := htt.NewRequest("POST", "/tokens", rdr)
+	w := htt.NewRecorder()
+	r.ServeHTTP(w, req)
+	c.Check(w.Code, Equals, http.StatusOK)
+
+	c.Log("  after making the POST, the token should be correct")
+	c.Assert(json.NewDecoder(w.Body).Decode(intoSession), IsNil)
+	expectSession, err := sgt.FindSession(s.db, intoSession.Expiration)
+	c.Assert(err, IsNil)
+	c.Check(intoSession, DeepEquals, expectSession)
+
+	c.Log("  new User can use his token on authed APIs normally")
+	c.Assert(sgt.ExpectResponse(r,
+		"/profile", "GET",
+		nil, new(users.User), &(newLogin.User),
+		http.StatusOK,
+		sgt.Bearer(expectSession.Token),
+	), IsNil)
+
+	cleanupAdminAPI(c, api)
+}
+
+func (s *RESTSuite) TestAdminPatchProfile(c *C) {
 	var (
 		tokenUUID   = uuid.NewV4()
 		adminKey    = auth.Token(tokenUUID[:])
@@ -87,7 +222,6 @@ func (s *RESTSuite) TestAdminPatchProfile(c *C) {
 
 		verb, path       string
 		header           http.Header
-		body             interface{}
 		expectStatus     int
 		into, expectResp interface{}
 
@@ -182,8 +316,7 @@ func (s *RESTSuite) TestAdminPatchProfile(c *C) {
 			test.should,
 		)
 		c.Assert(sgt.ExpectResponse(r,
-			test.path, test.verb,
-			test.body,
+			test.path, test.verb, nil,
 			test.into, test.expectResp,
 			test.expectStatus,
 			test.header,
