@@ -232,7 +232,14 @@ func (c Convo) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 					convo.ScribeBucket,
 					store.Bucket(scr),
 				))
-				if errView != nil {
+
+				switch errView {
+				case nil:
+				case bolt.ErrDatabaseNotOpen:
+					log.Printf(errors.Wrap(errView,
+						"failed to hangup Scribe",
+					).Error())
+				default:
 					log.Fatal(errors.Wrap(errView,
 						"failed to hangup Scribe",
 					).Error())
@@ -276,7 +283,13 @@ func (c Convo) Connect(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 		}
 		return
 	})
-	if err != nil {
+	switch err {
+	case nil:
+	case bolt.ErrDatabaseNotOpen:
+		log.Printf(errors.Wrap(err,
+			"failed to clean up River",
+		).Error())
+	default:
 		http.Error(w,
 			"failed to clean up River",
 			http.StatusInternalServerError)

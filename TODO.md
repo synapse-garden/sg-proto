@@ -100,6 +100,7 @@
 
 - [ ] Cloud (self?) deploy service
 
+- [ ] If database is closed, can't clean up rivers
 - [ ] User set type
 - [ ] Think about true vs false users in groups -- use slice in API?
 - [ ] Think about compressing Notes.
@@ -234,7 +235,7 @@
 - [x] scribe DeleteCheckins fails if the Scribe had no checkins.
 - [x] Notif hangup Recv never finishes if the websocket is closed
 - [x] Notifying APIs should not clear notif rivers; do that on startup
-- [ ] Scribe hangup fails if database deleted (makes tests fail)
+- [x] Scribe hangup fails if database deleted (makes tests fail)
 - [ ] No auth timeout / river / notifs closure
 - [ ] Tokens don't refresh on activity
   - [ ] Add this to token middleware?
