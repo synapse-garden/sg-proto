@@ -100,6 +100,7 @@
 
 - [ ] Cloud (self?) deploy service
 
+- [ ] Better testing of REST resource security.
 - [ ] If database is closed, can't clean up rivers
 - [ ] User set type
 - [ ] Think about true vs false users in groups -- use slice in API?
@@ -236,22 +237,17 @@
 - [x] Notif hangup Recv never finishes if the websocket is closed
 - [x] Notifying APIs should not clear notif rivers; do that on startup
 - [x] Scribe hangup fails if database deleted (makes tests fail)
+- [x] Refresh token auth middleware doesn't work
 - [ ] No auth timeout / river / notifs closure
-- [ ] Tokens don't refresh on activity
-  - [ ] Add this to token middleware?
 - [ ] Old Bus buckets should be deleted after the convo or stream is deleted.
 - [ ] Diagnose occasional test failures in RiverSuite.TestNewBus
-- [ ] Better testing of REST resource security.
 - [ ] Deleting the user's profile doesn't close his Streams.
 - [o] Surveyor / Respondent don't keep track of who's still alive.  If a
       Responder removes itself from its bucket, the Survey will fail.
   - STATUS: "Solved" by post-check if some didn't respond.
 - [ ] If a survey has a problem, responders are in an unknown state.
-- [ ] Refresh tokens must be concatenated to auth tokens in header
-- [ ] Refresh tokens must not zombify expired auth tokens, instead
-      create new tokens
 - [ ] Refresh tokens must be able to be invalidated
-- [ ] User auth should return same token if not expired? (TODO: understand this)
+- [ ] POST to /tokens should return any valid existing token of user.
 - [ ] Performance is terrible (~30ms on GET on /source???)
   - [ ] Is it just Postman?
   - [ ] Benchmarking?
@@ -301,6 +297,9 @@
 ## Account
 
 - [ ] incept.PunchTicket
+  - [ ] Currently just deletes the Ticket
+  - [ ] Should "punch" the Ticket so Admin API can see how many users
+        created / reissue tickets / etc.?
 - [x] Ticket API
 - [x] Password hash
 - [x] Create user
@@ -338,7 +337,7 @@
 - [ ] Close running stream ("river") from API (use Survey/Resp)
 - [ ] Close all users' rivers from API
 - [ ] Removing a user from a Stream hangs up the user's Stream bindings
-- [ ] Use https://golang.org/pkg/net/http/httptrace/ for REST test
+- [ ] Use https://golang.org/pkg/net/http/httptrace/ for REST test?
 - [ ] Inactive Rivers eventually time out
 
 ## Notifications
