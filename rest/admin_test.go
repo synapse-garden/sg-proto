@@ -87,8 +87,8 @@ func (s *RESTSuite) TestAdminNewLoginErrors(c *C) {
 		header:       sgt.Bearer(tokens["bodie"]),
 		expectStatus: http.StatusBadRequest,
 		into:         new(string),
-		expectResp: `invalid "Admin" token provided in ` +
-			`header "Authorization"` + "\n",
+		expectResp: `invalid token kind "Bearer", expected ` +
+			`"Admin"` + "\n",
 	}, {
 		should: "reject bad admin token",
 		verb:   "POST", path: "/admin/logins",
@@ -232,8 +232,8 @@ func (s *RESTSuite) TestAdminPatchProfile(c *C) {
 		header:       sgt.Bearer(tokens["bodie"]),
 		expectStatus: http.StatusBadRequest,
 		into:         new(string),
-		expectResp: `invalid "Admin" token provided in ` +
-			`header "Authorization"` + "\n",
+		expectResp: `invalid token kind "Bearer", expected ` +
+			`"Admin"` + "\n",
 	}, {
 		should: "reject bad admin token",
 		verb:   "PATCH", path: "/admin/profiles/foo",

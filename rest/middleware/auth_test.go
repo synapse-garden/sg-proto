@@ -129,25 +129,34 @@ func (s *MiddlewareSuite) TestAuthWS(c *C) {
 func (s *MiddlewareSuite) TestGetToken(c *C) {
 	validToken := auth.NewToken(auth.BearerType)
 	validBase64 := base64.StdEncoding.EncodeToString(validToken)
+
 	c.Logf("valid token: %+v", validToken)
-	c.Logf("base64: %s", validBase64)
 
 	for i, test := range []struct {
 		given     string
+		kind      auth.TokenType
 		expect    []byte
 		expectErr string
 	}{{
-		given: "",
-		expectErr: `no "Bearer" token provided in header ` +
-			`"Authorization"`,
+		given:     "",
+		expectErr: `no "Bearer" token provided`,
 	}, {
-		given: "Basic 12345",
-		expectErr: `invalid "Bearer" token provided in ` +
-			`header "Authorization"`,
+		given:     "Basic",
+		expectErr: `no "Bearer" token provided`,
+	}, {
+		given:     "Basic 12345 hoho",
+		expectErr: `too many token fields`,
+	}, {
+		given:     "Basic 12345",
+		expectErr: `invalid token kind "Basic", expected "Bearer"`,
 	}, {
 		given: "Bearer 12345",
 		expectErr: "invalid token `12345`: illegal base64 " +
 			"data at input byte 4",
+	}, {
+		given:     "Refresh " + validBase64,
+		kind:      auth.RefreshType,
+		expectErr: `invalid token kind "Refresh", expected "Bearer"`,
 	}, {
 		given:  "Bearer " + validBase64,
 		expect: validToken,

@@ -28,23 +28,21 @@ const (
 func GetToken(kind auth.TokenType, from string) ([]byte, error) {
 	// Token is expected to be base64 encoded byte slice.
 	// Kind is assumed to be valid.
-	substrings := strings.SplitN(from, kind.String()+" ", 2)
+	fields := strings.Fields(from)
 	switch {
-	case len(from) == 0:
+	case len(fields) == 0:
+		return nil, errors.Errorf("no %q token provided", kind)
+	case len(fields) == 1:
+		return nil, errors.Errorf("no %q token provided", kind)
+	case len(fields) != 2:
+		return nil, errors.New("too many token fields")
+	case fields[0] != kind.String():
 		return nil, errors.Errorf(
-			"no %q token provided in header %q",
-			kind, AuthHeader)
-	case len(substrings) != 2:
-		return nil, errors.Errorf(
-			"invalid %q token provided in header %q",
-			kind, AuthHeader)
-	case substrings[0] != "":
-		return nil, errors.Errorf(
-			"invalid %q token kind, use %q",
-			AuthHeader, kind)
+			"invalid token kind %q, expected %q",
+			fields[0], kind)
 	}
 
-	return auth.DecodeToken(substrings[1])
+	return auth.DecodeToken(fields[1])
 }
 
 // GetWSToken looks for an Authorization token of the given kind in the
