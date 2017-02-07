@@ -73,7 +73,7 @@ func GetWSToken(protocols string, kind auth.TokenType) ([]byte, error) {
 func AuthUser(h httprouter.Handle, db *bolt.DB, ctrs ...Contexter) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		// Is an authorized key in the header?
-		token, err := GetToken(
+		bearerToken, err := GetToken(
 			auth.BearerType,
 			r.Header.Get(string(AuthHeader)),
 		)
@@ -84,7 +84,7 @@ func AuthUser(h httprouter.Handle, db *bolt.DB, ctrs ...Contexter) httprouter.Ha
 
 		// TODO: Split into my two functions.
 		// Check whether the session token is valid
-		err = db.View(auth.CheckToken(token))
+		err = db.View(auth.CheckToken(bearerToken))
 		switch {
 		case err == nil && len(ctrs) == 0:
 			h(w, r, ps)
@@ -92,19 +92,23 @@ func AuthUser(h httprouter.Handle, db *bolt.DB, ctrs ...Contexter) httprouter.Ha
 		case err == nil:
 			// Apply requested context
 			ctx := new(auth.Context)
-			if err = db.View(auth.GetContext(ctx, token)); err != nil {
-				switch err.(type) {
-				case auth.ErrContextMissing:
-					// Valid session with no context.
-					log.Printf("unexpected error: valid session %#q with no context", token)
-					http.Error(w, errors.Wrap(
-						err, "error getting session context").Error(),
-						http.StatusInternalServerError)
-					return
-				default:
-					http.Error(w, "error getting session context", http.StatusInternalServerError)
-					return
-				}
+			err = db.View(auth.GetContext(ctx, bearerToken))
+			switch {
+			case auth.IsContextMissing(err):
+				// Valid session with no context.
+				log.Printf("unexpected error: valid "+
+					"session %#q with no context",
+					bearerToken)
+				http.Error(w, errors.Wrap(err,
+					"error getting session context",
+				).Error(), http.StatusInternalServerError)
+				return
+			case err != nil:
+				http.Error(w,
+					"error getting session context",
+					http.StatusInternalServerError,
+				)
+				return
 			}
 			for _, ctr := range ctrs {
 				r = ctr(r, ctx)
@@ -113,59 +117,126 @@ func AuthUser(h httprouter.Handle, db *bolt.DB, ctrs ...Contexter) httprouter.Ha
 			return
 		}
 
-		switch err.(type) {
-		case auth.ErrMissingSession:
-			http.Error(w, "invalid session token", http.StatusUnauthorized)
+		switch {
+		case auth.IsMissingSession(err):
+			http.Error(w,
+				"invalid session token",
+				http.StatusUnauthorized,
+			)
 			return
-		case auth.ErrTokenExpired:
+		case auth.IsTokenExpired(err):
 			rToken, err := GetToken(
 				auth.RefreshType,
 				r.Header.Get(string(RefreshHeader)),
 			)
 			if err != nil {
-				http.Error(w, errors.Wrap(err, "invalid refresh token").Error(), http.StatusUnauthorized)
+				http.Error(w, errors.Wrap(
+					err, "invalid refresh token",
+				).Error(), http.StatusUnauthorized)
 				return
 			}
-			if err := db.View(auth.CheckRefresh(rToken)); store.IsMissing(err) {
-				http.Error(w, errors.Wrap(err, "invalid refresh token").Error(), http.StatusUnauthorized)
+			err = db.View(auth.CheckRefresh(rToken))
+			switch {
+			case store.IsMissing(err):
+				http.Error(w, errors.Wrap(
+					err, "invalid refresh token",
+				).Error(), http.StatusUnauthorized)
 				return
-			} else if err != nil {
-				http.Error(w, errors.Wrap(err, "failed to check refresh token").Error(), http.StatusInternalServerError)
-				log.Printf("Failed to check refresh token: %#v", err)
+			case err != nil:
+				http.Error(w, errors.Wrap(err,
+					"failed to check refresh token",
+				).Error(), http.StatusInternalServerError)
+				log.Printf("Failed to check refresh "+
+					"token: %#v", err)
 				return
 			}
-			sess := &auth.Session{Token: token, RefreshToken: rToken}
-			err = db.Update(auth.RefreshIfValid(sess, time.Now().Add(auth.Expiration), auth.Expiration))
-			if err != nil {
-				switch err.(type) {
-				case auth.ErrMissingSession:
-					http.Error(w, "invalid refresh token", http.StatusUnauthorized)
-				default:
-					http.Error(w, errors.Wrap(err, "failed to refresh session").Error(), http.StatusInternalServerError)
-					log.Printf("Failed to refresh session: %#v", err)
-				}
+			sess := &auth.Session{
+				Token:        bearerToken,
+				RefreshToken: rToken,
+			}
+			err = db.Update(auth.RefreshIfValid(sess,
+				time.Now().Add(auth.Expiration),
+				auth.Expiration,
+			))
+			switch {
+			case auth.IsMissingSession(err):
+				http.Error(w,
+					"invalid refresh token",
+					http.StatusUnauthorized,
+				)
+				return
+			case err != nil:
+				http.Error(w, errors.Wrap(err,
+					"failed to refresh session",
+				).Error(), http.StatusInternalServerError)
+				log.Printf("Failed to refresh session "+
+					": %#v", err)
 				return
 			}
 
-			if err := db.View(auth.CheckToken(token)); err != nil {
-				switch err.(type) {
-				case auth.ErrMissingSession:
-					http.Error(w, "invalid session token", http.StatusUnauthorized)
-					// Something weird happened.
-					log.Printf("Failed to verify session token after refresh: %#v", err)
-					return
-				default:
-					http.Error(w, errors.Wrap(err, "failed to verify session token after refresh").Error(), http.StatusInternalServerError)
-					log.Printf("Failed to verify session token after refresh: %#v", err)
-					return
-				}
+			err = db.View(auth.CheckToken(bearerToken))
+			switch {
+			case auth.IsMissingSession(err):
+				http.Error(w, "invalid session token",
+					http.StatusUnauthorized)
+				// Something weird happened.
+				log.Printf("Failed to verify session "+
+					"token after refresh: %#v", err)
+				return
+			case err != nil:
+				http.Error(w, errors.Wrap(err,
+					"failed to verify session "+
+						"token after refresh",
+				).Error(), http.StatusInternalServerError)
+				log.Printf("Failed to verify session "+
+					"token after refresh: %#v", err)
+				return
 			}
-			// If we ran the gamut of possible errors here, we're in the clear and the session was refreshed.  Carry on.
+
+			// If we ran the gamut of possible errors here,
+			// we're in the clear and the session was
+			// refreshed.  Carry on.
+
+			if len(ctrs) == 0 {
+				// If there was no context, just apply
+				// the handler.
+				h(w, r, ps)
+				return
+			}
+
+			// Otherwise, load the auth context and apply
+			// the requested contexts to the request.
+			ctx := new(auth.Context)
+			err = db.View(auth.GetContext(ctx, bearerToken))
+			switch {
+			case auth.IsContextMissing(err):
+				// Valid session with no context.
+				log.Printf("unexpected error: valid "+
+					"session %#q with no context",
+					bearerToken,
+				)
+				http.Error(w, errors.Wrap(
+					err, "error getting session context",
+				).Error(), http.StatusInternalServerError)
+				return
+			case err != nil:
+				http.Error(w,
+					"error getting session context",
+					http.StatusInternalServerError,
+				)
+				return
+			}
+			for _, ctr := range ctrs {
+				r = ctr(r, ctx)
+			}
+			h(w, r, ps)
+			return
 		default:
-			http.Error(w, errors.Wrap(err, "unexpected server error").Error(), http.StatusInternalServerError)
+			http.Error(w, errors.Wrap(
+				err, "unexpected server error",
+			).Error(), http.StatusInternalServerError)
 			return
 		}
-
 	}
 }
 
@@ -191,19 +262,23 @@ func AuthWSUser(h httprouter.Handle, db *bolt.DB, ctrs ...Contexter) httprouter.
 		case err == nil:
 			// Apply requested context
 			ctx := new(auth.Context)
-			if err = db.View(auth.GetContext(ctx, token)); err != nil {
-				switch err.(type) {
-				case auth.ErrContextMissing:
-					// Valid session with no context.
-					log.Printf("unexpected error: valid session %#q with no context", token)
-					http.Error(w, errors.Wrap(
-						err, "error getting session context").Error(),
-						http.StatusInternalServerError)
-					return
-				default:
-					http.Error(w, "error getting session context", http.StatusInternalServerError)
-					return
-				}
+			err = db.View(auth.GetContext(ctx, token))
+			switch {
+			case auth.IsContextMissing(err):
+				// Valid session with no context.
+				log.Printf("unexpected error: valid "+
+					"session %#q with no context",
+					token)
+				http.Error(w, errors.Wrap(err,
+					"error getting session context",
+				).Error(), http.StatusInternalServerError)
+				return
+			case err != nil:
+				http.Error(w,
+					"error getting session context",
+					http.StatusInternalServerError,
+				)
+				return
 			}
 			for _, ctr := range ctrs {
 				r = ctr(r, ctx)
@@ -212,56 +287,124 @@ func AuthWSUser(h httprouter.Handle, db *bolt.DB, ctrs ...Contexter) httprouter.
 			return
 		}
 
-		switch err.(type) {
-		case auth.ErrMissingSession:
-			http.Error(w, "invalid session token", http.StatusUnauthorized)
+		switch {
+		case auth.IsMissingSession(err):
+			http.Error(w, "invalid session token",
+				http.StatusUnauthorized)
 			return
-		case auth.ErrTokenExpired:
-			rToken, err := GetToken(
+		case auth.IsTokenExpired(err):
+			rToken, err := GetWSToken(
+				r.Header.Get(string(WSProtocolsHeader)),
 				auth.RefreshType,
-				r.Header.Get(string(RefreshHeader)),
 			)
 			if err != nil {
-				http.Error(w, errors.Wrap(err, "invalid refresh token").Error(), http.StatusUnauthorized)
+				http.Error(w, errors.Wrap(err,
+					"invalid refresh token",
+				).Error(), http.StatusUnauthorized)
 				return
 			}
-			if err := db.View(auth.CheckRefresh(rToken)); store.IsMissing(err) {
-				http.Error(w, errors.Wrap(err, "invalid refresh token").Error(), http.StatusUnauthorized)
+			err = db.View(auth.CheckRefresh(rToken))
+			switch {
+			case store.IsMissing(err):
+				http.Error(w, errors.Wrap(
+					err, "invalid refresh token",
+				).Error(), http.StatusUnauthorized)
 				return
-			} else if err != nil {
-				http.Error(w, errors.Wrap(err, "failed to check refresh token").Error(), http.StatusInternalServerError)
-				log.Printf("Failed to check refresh token: %#v", err)
+			case err != nil:
+				http.Error(w, errors.Wrap(err,
+					"failed to check refresh token",
+				).Error(), http.StatusInternalServerError)
+				log.Printf("Failed to check refresh "+
+					"token: %#v", err)
 				return
 			}
-			sess := &auth.Session{Token: token, RefreshToken: rToken}
-			err = db.Update(auth.RefreshIfValid(sess, time.Now().Add(auth.Expiration), auth.Expiration))
-			if err != nil {
-				switch err.(type) {
-				case auth.ErrMissingSession:
-					http.Error(w, "invalid refresh token", http.StatusUnauthorized)
-				default:
-					http.Error(w, errors.Wrap(err, "failed to refresh session").Error(), http.StatusInternalServerError)
-					log.Printf("Failed to refresh session: %#v", err)
-				}
+			sess := &auth.Session{
+				Token:        token,
+				RefreshToken: rToken,
+			}
+			err = db.Update(auth.RefreshIfValid(sess,
+				time.Now().Add(auth.Expiration),
+				auth.Expiration,
+			))
+			switch {
+			case auth.IsMissingSession(err):
+				http.Error(w,
+					"invalid refresh token",
+					http.StatusUnauthorized,
+				)
+				return
+			case err != nil:
+				http.Error(w, errors.Wrap(err,
+					"failed to refresh session",
+				).Error(), http.StatusInternalServerError)
+				log.Printf("Failed to refresh "+
+					"session: %#v", err)
 				return
 			}
 
-			if err := db.View(auth.CheckToken(token)); err != nil {
-				switch err.(type) {
-				case auth.ErrMissingSession:
-					http.Error(w, "invalid session token", http.StatusUnauthorized)
-					// Something weird happened.
-					log.Printf("Failed to verify session token after refresh: %#v", err)
-					return
-				default:
-					http.Error(w, errors.Wrap(err, "failed to verify session token after refresh").Error(), http.StatusInternalServerError)
-					log.Printf("Failed to verify session token after refresh: %#v", err)
-					return
-				}
+			err = db.View(auth.CheckToken(token))
+			switch {
+			case auth.IsMissingSession(err):
+				http.Error(w,
+					"invalid session token",
+					http.StatusUnauthorized,
+				)
+				// Something weird happened.
+				log.Printf("Failed to verify session "+
+					"token after refresh: %#v", err)
+				return
+			case err != nil:
+				http.Error(w, errors.Wrap(err,
+					"failed to verify session "+
+						"token after refresh",
+				).Error(), http.StatusInternalServerError)
+				log.Printf("Failed to verify session "+
+					"token after refresh: %#v", err)
+				return
 			}
-			// If we ran the gamut of possible errors here, we're in the clear and the session was refreshed.  Carry on.
+
+			// If we ran the gamut of possible errors here,
+			// we're in the clear and the session was
+			// refreshed.  Carry on.
+
+			if len(ctrs) == 0 {
+				// If there was no context, just apply
+				// the handler.
+				h(w, r, ps)
+				return
+			}
+
+			// Otherwise, load the auth context and apply
+			// the requested contexts to the request.
+			ctx := new(auth.Context)
+			err = db.View(auth.GetContext(ctx, token))
+			switch {
+			case auth.IsContextMissing(err):
+				// Valid session with no context.
+				log.Printf("unexpected error: valid "+
+					"session %#q with no context",
+					token,
+				)
+				http.Error(w, errors.Wrap(
+					err, "error getting session context",
+				).Error(), http.StatusInternalServerError)
+				return
+			case err != nil:
+				http.Error(w,
+					"error getting session context",
+					http.StatusInternalServerError,
+				)
+				return
+			}
+			for _, ctr := range ctrs {
+				r = ctr(r, ctx)
+			}
+			h(w, r, ps)
+			return
 		default:
-			http.Error(w, errors.Wrap(err, "unexpected server error").Error(), http.StatusInternalServerError)
+			http.Error(w, errors.Wrap(
+				err, "unexpected server error",
+			).Error(), http.StatusInternalServerError)
 			return
 		}
 
@@ -280,13 +423,14 @@ func AuthAdmin(h httprouter.Handle, db *bolt.DB) httprouter.Handle {
 			return
 		}
 		err = db.View(admin.CheckToken(token))
-		if err != nil {
-			switch err.(type) {
-			case admin.ErrNotFound:
-				http.Error(w, err.Error(), http.StatusUnauthorized)
-			default:
-				http.Error(w, errors.Wrap(err, "error authorizing admin API key").Error(), http.StatusInternalServerError)
-			}
+		switch {
+		case admin.IsNotFound(err):
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		case err != nil:
+			http.Error(w, errors.Wrap(err,
+				"error authorizing admin API key",
+			).Error(), http.StatusInternalServerError)
 			return
 		}
 

@@ -20,6 +20,14 @@ func (e ErrNotFound) Error() string {
 	return fmt.Sprintf("no such admin token %#q", string(e))
 }
 
+func IsNotFound(e error) bool {
+	if e == nil {
+		return false
+	}
+	_, ok := e.(ErrNotFound)
+	return ok
+}
+
 func NewToken(token auth.Token) func(*bolt.Tx) error {
 	salt := uuid.NewV4()
 	salted := sha256.Sum256(append(token, salt.Bytes()...))

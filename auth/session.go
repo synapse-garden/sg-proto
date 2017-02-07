@@ -2,7 +2,6 @@ package auth
 
 import (
 	"encoding/base64"
-	"fmt"
 	"time"
 
 	"github.com/synapse-garden/sg-proto/store"
@@ -51,24 +50,6 @@ type Token []byte
 
 func (t Token) String() string {
 	return base64.StdEncoding.EncodeToString([]byte(t))
-}
-
-type ErrInvalidTokenType string
-
-func (e ErrInvalidTokenType) Error() string {
-	return fmt.Sprintf("invalid token type %q", string(e))
-}
-
-type ErrMissingSession []byte
-
-func (e ErrMissingSession) Error() string {
-	return fmt.Sprintf("no such session %#q", string(e))
-}
-
-type ErrTokenExpired []byte
-
-func (e ErrTokenExpired) Error() string {
-	return fmt.Sprintf("session %#q expired", string(e))
 }
 
 // Session is a client login session.

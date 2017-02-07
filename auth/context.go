@@ -25,6 +25,16 @@ func (e ErrContextMissing) Error() string {
 	return fmt.Sprintf("session context not found for %#q", string(e))
 }
 
+// IsContextMissing indicates whether the given error is an
+// ErrContextMissing.
+func IsContextMissing(e error) bool {
+	if e == nil {
+		return false
+	}
+	_, ok := e.(ErrContextMissing)
+	return ok
+}
+
 // Context maps a Session token to other IDs which can be used to look
 // up values from other buckets, or be threaded through headers by
 // middleware, etc.
