@@ -18,6 +18,11 @@ The `conf.toml` file specifies config options.
 
 ## [TODO](TODO.md)
 
+## [Orgfile](TODO.org)
+
+For [EMacs](http://www.gnu.org/software/emacs) [Org-Mode](http://orgmode.org)
+users, an org-mode file for the SG-Proto roadmap may be found [here](TODO.org).
+
 ## [CHANGELOG](CHANGELOG.md)
 
 ### [LICENSE](LICENSE.txt)

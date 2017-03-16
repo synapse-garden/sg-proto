@@ -1,0 +1,552 @@
+SG-Proto Orgfile
+
+* v0.5.0+ ?
+** MF task kernel integration
+** Cascading store.Delete / store.Update?
+** Map TODOs to Github Issues?
+** Map TODOs to SG streams / items?
+** Multi-part Stream receives
+
+* v0.4.0 ?
+** Versioned REST API?
+** Apple / etc Push API?
+** Distributed storage?
+*** If so, MUST revise Surv / Resp rivers!!!
+** Cassandra / etc bigtable backend?
+** Offer River connections besides Websocket?
+** Consider package-global caching optimizations to things such as
+      user ID hashes
+
+* v0.3.0 ?
+** Refactor Streams database funcs
+*** Marshal, Unmarshal, Delete, Get etc. take multi bolt Buckets
+** Secure ticket "incept" endpoint (can you just hammer it with UUIDs?)
+** Concurrent store.Wrap?
+** Concurrent store.Wrap with dep chains?
+** Dep chains?
+** DB interface + cache?
+** Optimize buckets / transactions in packages?  Pass needed behaviors
+   through store package?  NewTickets, etc. inefficient
+** Store.WrapBucket(store.Bucket(...), ...Transact)
+** Decide about capnproto / protobuf for Bolt / Rivers
+** Read-only Streams
+** Finer-grained read authorization, public / private / circles?
+** Only one notification stream exists per user
+** Package user can specify how it works
+** Consider using a salted hash for stream topics
+** Consider globally buffering all streams
+
+* v0.2.0 ?
+** Notif global Topic
+** Decide whether auth.Refresh should delete and exchange the given refresh token
+** "Friendly UUIDs" -- map 4-bit chunks to phonemes or small words?
+** "HTTP Errors" -- this is really two problems.
+*** JSON-serialized form errors that can be used to indicate problems
+    in a context-friendly way
+*** HTTP error codes which have some relevance to the API user to help
+    clarify what went wrong without passing forward sensitive data.
+** Better database testing -- maybe a memory mapped file or some other
+   option so our setups / teardowns don't have to thrash the filesystem.
+** Testable rest.Bind
+** Maybe a database mock?
+** Caching database wrapper
+** Use bolt batch
+** Bucket threading
+** Transaction type to replace func tx blah
+** Better ErrorMissing / ErrorExists context messages
+*** HTTP / Display Error interface which has Code and Message suitable for users
+*** ValidationError interface which tells the client what keys / etc are wrong?
+** Figure out whether we can find a logical mapping for UUID / base64
+   shasum strings
+** Notification topic performance
+*** Individual publishers for GUIDs instead of API-global
+**** Group.Hash -> GUID unique by users (?)
+***** Create and destroy Group pub rivers on Group update
+***** API pub river publishes to GUID subscribers, GUIDs publish to
+      their subscribers (???)
+***** Clarify this API / sketch up some tests
+** Refactor websocket Connect REST methods into nested testable steps
+** Actual OAuth2 registration for app clients
+
+* v0.1.0
+** Bugs
+*** Users can't understand missing session Error() string since it's bytes
+**** Configure error output to match expected values: base64 shasums or
+     UUID strings
+*** Invalidate / reissue auth token after refresh
+**** Figure out how to thread session context through this
+
+** Dev mode
+*** Specify me
+*** No database?
+*** Use given mock file as initial store?
+*** Expose endpoints without sessions?
+*** Default superuser logins given?
+
+** Errors
+*** An interface is provided for API-serializable errors
+*** An interface is provided for non-lethal errors
+**** IsLethal
+**** Stop returning bools from websocket Conn reader
+
+** Unorganized
+
+*** Organize TODOs
+
+*** Cloud (self?) deploy service
+
+*** Better testing of REST resource security.
+*** If database is closed, can't clean up rivers
+*** User set type
+*** Think about true vs false users in groups -- use slice in API?
+*** Think about compressing Notes.
+*** Figure out some technique to formalize state translation
+    permitted on group membership instead of manually checkin
+    everything.  Permitter interface{ Permit(u) bool } minimum?
+    Implement on methods?
+**** Make a few simpler experiments.
+*** Map out bounty interactions fully and consider irreversible bounty.
+*** -wipe flag to reset DB
+*** Consider an "antifragile" failure-friendly design approach
+*** Figure out a way to sort things in local database instead of
+    random order due to UUID keys.  Incremental ID in bucket for local
+    ordering, with UUID "ID" value for stored object when there's a
+    universal object?
+*** Profile Bounty needs transaction ledger of some kind -- think about it
+*** Use store.ID **everywhere** -- store.Marshal / store.Unmarshal
+    at least
+*** Do some revisions to store.LoadStorer / etc -- maybe there's a
+    better way.  A struct containing an ID with Store / etc methods?
+*** Think about conditioning.
+*** Many users doing synchronous Task updates could lock things up --
+    find a better way.  Maybe all Tasks should be LRU cached with a
+    lazy Mutex that only serializes in case of collision?  Could this
+    be done with channels instead?
+*** Solve the problem of name collisions in Task and Stream / Convo
+*** Unify Stream and Convo -- maybe they could just be identical and
+    you pass the bucket to the API
+*** Marshalable ID type (uuid.UUID with {Unm|M}arshalJSON)
+*** Refactor to DSL for endpoint definition -- we want this to be easy
+    to extend
+*** Caching / indexing helpers
+*** High-level intelligence design
+*** "Resource" interface to make CRUD much, much simpler
+*** DONE The design of Rivers must support a future implementation which
+    CLOSED: [2017-03-16 Thu 09:21]
+    permits the API to use req/rep Rivers to control the behavior of
+    receivers.
+ - [x] Reorganize streams package with more abstraction
+ - [x] Standardize on JSON camelCase vs snake_case etc
+*** All the database backend stuff is a spaghettified nightmare since
+    each package manages its own database behaviors.
+*** Tighten down and offer Streams as a CLI option.
+*** Remove self from stream / convo if you don't want to be in it,
+    even if you don't own it.
+*** Redesign streams / hangup event chains
+*** Don't encode the same resource over and over for notifs.
+*** No way of cleaning up failed Scribes
+*** REST resources as interface / code gen?
+*** Tighten up convo message funcs
+*** Make convo message blocks
+*** Test convo message db funcs
+*** Messages keyed by ID instead of date
+**** Migration for this?
+*** Test notif hangups
+*** Make a helper function to make hangups easier to use.
+*** ws.HangupSender a horrible mess.  Do something better, for the
+    love of God!
+*** REST Stream tests brittle
+*** Survey response errors need a useful error implementation.
+*** Swagger HTTP API doc
+*** Poms / some kind of work measure
+*** Some kind of psych features
+*** Make a decision on Rust
+*** Switch to encoding/gob instead of JSON on the backend and benchmark it
+**** Why not protobuf, msgpack, colfer, capnproto?
+**** Some other dynamic schema?
+**** Make a simple call and defer this decision.
+*** "store" package tests
+*** Make a call about frontend hashing.  Do we really want to?
+    Not really secure unless salted, and even then it's "just another password".
+*** https://cdn.jsdelivr.net/sjcl/1.0.4/sjcl.js for browser
+    http://jsfiddle.net/kRcNK/40/
+*** Scour for cases where Put or Marshal could fail and return credentials
+**** ???
+*** Return x.ErrMissing, not store.ErrMissing, in Unmarshal cases
+*** User logout by uname + pwhash (DELETE /tokens ?)
+**** DONE Lookup from username to session
+     CLOSED: [2017-03-16 Thu 09:22]
+*** Users can GET /streams with search parameters
+*** More streams abstraction (better Filters, IsMember, etc. moved into package API)
+*** Make plan to reduce / eliminate rest.Stream API redundancy
+**** ???
+*** Make plan to reduce all rest redundancy
+*** Chat endpoint which uses rest.ConnectStream with a river.Messager under the hood!
+*** Sanely handle stream errors
+*** Thoroughly test ws package
+*** client package uses custom HTTP client instead of global
+
+* v0.0.1
+** Bugs
+
+*** DONE Fix Windows timestamp UUID generation (use uuid.NewV4)
+    CLOSED: [2017-03-16 Thu 09:23]
+*** DONE Fix Windows startup BoltDB panic (nil transaction or db?)
+    CLOSED: [2017-03-16 Thu 09:23]
+*** DONE body of POST to /incept/:ticket must include pwhash field
+    CLOSED: [2017-03-16 Thu 09:23]
+*** DONE AuthAdmin expects base64 hashed sha256 of auth.Token (uuid Bytes)
+    CLOSED: [2017-03-16 Thu 09:23]
+*** DONE Admin API key stored insecurely, must hash + salt first
+    CLOSED: [2017-03-16 Thu 09:23]
+**** DONE Report base64 encoded value
+     CLOSED: [2017-03-16 Thu 09:23]
+*** DONE Can't log out because session is not URL-encoded
+    CLOSED: [2017-03-16 Thu 09:23]
+*** DONE River Bind never returns, so River is never cleaned up
+    CLOSED: [2017-03-16 Thu 09:24]
+*** DONE Fix failing or blocking tests
+    CLOSED: [2017-03-16 Thu 09:24]
+*** DONE Bus and Sub Rivers must never overwrite existing IDs
+    CLOSED: [2017-03-16 Thu 09:24]
+*** DONE river.Surveyor and river.Respondent require a slight pause between
+    CLOSED: [2017-03-16 Thu 09:24]
+    Dial and usage.  Data race found due to mangos Init!
+    https://github.com/go-mangos/mangos/issues/236
+*** DONE Convo message parse errors are NOT sent to the websocket!
+    CLOSED: [2017-03-16 Thu 09:24]
+*** DONE Convo Delete does not do anything if no errors.
+    CLOSED: [2017-03-16 Thu 09:24]
+*** DONE Stream Delete does not do anything if no errors.
+    CLOSED: [2017-03-16 Thu 09:24]
+*** DONE Convo connect/disconnect notifs don't specify convo ID.
+    CLOSED: [2017-03-16 Thu 09:24]
+*** DONE Stream connect/disconnect notifs don't specify stream ID.
+    CLOSED: [2017-03-16 Thu 09:25]
+*** DONE Stream Put does not require the user to own the Stream.
+    CLOSED: [2017-03-16 Thu 09:26]
+*** DONE Convo Put does not require the user to own the Convo.
+    CLOSED: [2017-03-16 Thu 09:26]
+*** DONE Convo Messages GET has incorrect range
+    CLOSED: [2017-03-16 Thu 09:26]
+*** DONE Convo delete notif should not use stream delete
+    CLOSED: [2017-03-16 Thu 09:26]
+*** DONE 404 on empty messages, should be populated on convo create.
+    CLOSED: [2017-03-16 Thu 09:26]
+*** DONE Convo Delete should hang up Scribe and users.
+    CLOSED: [2017-03-16 Thu 09:27]
+*** DONE Stream Delete should hang up users.
+    CLOSED: [2017-03-16 Thu 09:27]
+*** DONE Convo Delete should remove Scribe checkins bucket.
+    CLOSED: [2017-03-16 Thu 09:27]
+*** DONE Convo Delete should remove convo's messages bucket.
+    CLOSED: [2017-03-16 Thu 09:27]
+*** DONE Convo Delete should have correct auth error message on DELETE.
+    CLOSED: [2017-03-16 Thu 09:27]
+*** DONE Convo.Bind should never silently drop an error on NewPub.
+    CLOSED: [2017-03-16 Thu 09:27]
+*** DONE convo.Scribe.DeleteCheckins should not panic if the Checkins
+    CLOSED: [2017-03-16 Thu 09:27]
+    bucket is missing; this is normal and means no checkins exist yet.
+*** DONE If user tries to check out of deleted convo (i.e. closes websocket), fatal error occurs:
+    CLOSED: [2017-03-16 Thu 09:27]
+  > failed to check out of convo: no such bucket `81c4b367-7cd0-46a1-90d0-618fb5c790b8`
+*** DONE Empty GET on /convos should return [], not null
+    CLOSED: [2017-03-16 Thu 09:27]
+*** DONE Notifs arrive with contents base64-encoded
+    CLOSED: [2017-03-16 Thu 09:28]
+*** DONE Fatal race in convo Scribe hangup on DELETE
+    CLOSED: [2017-03-16 Thu 09:28]
+*** DONE Convo / Stream PUT which removes users must also hang them up.
+    CLOSED: [2017-03-16 Thu 09:28]
+*** DONE Race / 500 on convo websocket close / convo delete.
+    CLOSED: [2017-03-16 Thu 09:28]
+*** DONE Race in Convo PUT due to hangup
+    CLOSED: [2017-03-16 Thu 09:28]
+*** DONE Race in Scribe hangup / Convo Delete.
+    CLOSED: [2017-03-16 Thu 09:28]
+*** DONE scribe DeleteCheckins fails if the Scribe had no checkins.
+    CLOSED: [2017-03-16 Thu 09:28]
+*** DONE Notif hangup Recv never finishes if the websocket is closed
+    CLOSED: [2017-03-16 Thu 09:28]
+*** DONE Notifying APIs should not clear notif rivers; do that on startup
+    CLOSED: [2017-03-16 Thu 09:28]
+*** DONE Scribe hangup fails if database deleted (makes tests fail)
+    CLOSED: [2017-03-16 Thu 09:28]
+*** DONE Refresh token auth middleware doesn't work
+    CLOSED: [2017-03-16 Thu 09:28]
+*** No auth timeout / river / notifs closure
+*** Old Bus buckets should be deleted after the convo or stream is deleted.
+*** Diagnose occasional test failures in RiverSuite.TestNewBus
+*** Deleting the user's profile doesn't close his Streams.
+**** DONE Surveyor / Respondent don't keep track of who's still alive.  If a
+     CLOSED: [2017-03-16 Thu 09:29]
+     Responder removes itself from its bucket, the Survey will fail.
+     STATUS: "Solved" by post-check if some didn't respond.
+*** If a survey has a problem, responders are in an unknown state.
+*** Refresh tokens must be able to be invalidated
+*** POST to /tokens should return any valid existing token of user.
+*** Performance is terrible (~30ms on GET on /source???)
+**** Is it just Postman?
+**** Benchmarking?
+**** Bolt?
+***** Configure cache settings?
+*** Deleting the user's profile doesn't eliminate his owned objects
+    and open rivers
+*** Bad usernames cannot be looked up for expired Sessions
+
+** Admin API
+*** DONE AuthAdmin middleware
+    CLOSED: [2017-03-16 Thu 09:29]
+*** DONE Create ticket
+    CLOSED: [2017-03-16 Thu 09:29]
+*** DONE PATCH /admin/profiles/:id?addCoin=(-)12345
+    CLOSED: [2017-03-16 Thu 09:29]
+*** DONE POST /admin/profiles users.User to create User without Ticket
+    CLOSED: [2017-03-16 Thu 09:29]
+*** GET /tickets?per_page=n&page=m
+*** DONE Delete ticket(s)
+    CLOSED: [2017-03-16 Thu 09:30]
+*** DONE Master API key printed on startup?
+    CLOSED: [2017-03-16 Thu 09:30]
+**** DONE Use own API key via config?
+     CLOSED: [2017-03-16 Thu 09:30]
+**** DONE Fix admin key nonsense
+     CLOSED: [2017-03-16 Thu 09:30]
+
+** Code quality / package sanitation
+*** DONE Split Streams and Rivers
+    CLOSED: [2017-03-16 Thu 09:49]
+*** Make sure all empty GETs return [], not null
+*** Tighten up Convo REST API, add deferred cleanups
+*** Update README.md and CONTRIBUTING.md, clean up 0.0.1 TODO
+*** Comment all exported functions, types, methods, and constants
+*** Make sure not just anyone can get a refresh token
+*** Log ERROR statements on all unexpected internal errors
+*** Update store.Version
+
+** GPL
+*** DONE Host own source code under /source or some such.
+    CLOSED: [2017-03-16 Thu 09:31]
+
+** Login / Session / Logout
+*** DONE Clear out old session tokens on startup
+    CLOSED: [2017-03-16 Thu 09:31]
+*** DONE auth.Session API
+    CLOSED: [2017-03-16 Thu 09:31]
+*** auth.Login tests
+*** DONE Delineate split between account (users.User) and auth.Login
+    CLOSED: [2017-03-16 Thu 09:31]
+*** DONE Session auth middleware
+    CLOSED: [2017-03-16 Thu 09:31]
+*** Test HandleDeleteToken (URL encoding, etc.)
+*** DONE Session key => session context (user ID, etc.) lookup
+    CLOSED: [2017-03-16 Thu 09:31]
+
+** Account
+*** incept.PunchTicket
+*** Currently just deletes the Ticket
+*** Should "punch" the Ticket so Admin API can see how many users
+    created / reissue tickets / etc.?
+*** DONE Ticket API
+    CLOSED: [2017-03-16 Thu 09:32]
+*** DONE Password hash
+    CLOSED: [2017-03-16 Thu 09:32]
+*** DONE Create user
+    CLOSED: [2017-03-16 Thu 09:32]
+*** DONE Log in
+    CLOSED: [2017-03-16 Thu 09:32]
+*** DONE Log out
+    CLOSED: [2017-03-16 Thu 09:32]
+*** DONE Test rest.Incept auth.Login creation
+    CLOSED: [2017-03-16 Thu 09:32]
+
+** Profile
+*** DONE GET /profile
+    CLOSED: [2017-03-16 Thu 09:50]
+*** DONE DELETE /profile
+    CLOSED: [2017-03-16 Thu 09:50]
+
+*** DONE Have bounty
+    CLOSED: [2017-03-16 Thu 09:50]
+*** DONE User is notified when profile changes (e.g. bounty increase)
+    CLOSED: [2017-03-16 Thu 09:50]
+
+*** Update with new password
+
+** Ledger?
+** Streams
+*** DONE Stream has multiple Rivers
+    CLOSED: [2017-03-16 Thu 09:46]
+*** DONE Rivers can be created and deleted, and dial one another using
+    CLOSED: [2017-03-16 Thu 09:46]
+    Mangos inproc Bus protocol
+*** DONE Rivers can Send() and Recv() and Close()
+    CLOSED: [2017-03-16 Thu 09:46]
+*** DONE Rivers close endpoints when told
+    CLOSED: [2017-03-16 Thu 09:46]
+*** DONE ClearRivers (eliminates river cache on startup)
+    CLOSED: [2017-03-16 Thu 09:46]
+*** DONE Stream REST API
+    CLOSED: [2017-03-16 Thu 09:46]
+*** DONE Users can GET /streams they belong to, not just Streams they own
+    CLOSED: [2017-03-16 Thu 09:46]
+*** DONE SSL "wss" works correctly
+    CLOSED: [2017-03-16 Thu 09:48]
+*** DONE Multiple Bus Rivers per Stream per User
+    CLOSED: [2017-03-16 Thu 09:48]
+*** DONE User is notified when added to a Stream
+    CLOSED: [2017-03-16 Thu 09:48]
+*** DONE Stream members are notified when a user connects to a Stream
+    CLOSED: [2017-03-16 Thu 09:48]
+*** DONE Stream members are notified when a user leaves a Stream
+    CLOSED: [2017-03-16 Thu 09:48]
+*** List users connected to Convo (maybe a field in the Convo?)
+*** Delete meta buckets on Convo close.
+*** Close running stream ("river") from API (use Survey/Resp)
+*** Close all users' rivers from API
+*** Removing a user from a Stream hangs up the user's Stream bindings
+*** Use https://golang.org/pkg/net/http/httptrace/ for REST test?
+*** Inactive Rivers eventually time out
+
+** Notifications
+
+*** DONE notif.MakeUserTopic returns a notif.UserTopic generated uniquely
+    CLOSED: [2017-03-16 Thu 09:51]
+    using "USER"+BLAKE2(id).
+*** DONE User can connect to ws to subscribe to notifs on topic uniquely
+    CLOSED: [2017-03-16 Thu 09:51]
+    generated from username.
+*** DONE APIs publish notifs to each affected user
+    CLOSED: [2017-03-16 Thu 09:51]
+**** DONE A user cannot spoof the topic by making their username something
+     CLOSED: [2017-03-16 Thu 09:51]
+     colliding with another user's topic.  ("john" vs "johndoe")
+**** DONE Use u/BLAKE2 hash of username.
+     CLOSED: [2017-03-16 Thu 09:51]
+**** DONE Notif package generates a 64-byte unique ID to prepend the User's
+     CLOSED: [2017-03-16 Thu 09:51]
+     topics with.
+*** DONE Pub topics are the output of some function, the API does not use
+    CLOSED: [2017-03-16 Thu 09:51]
+    its own topics.
+*** DONE The user switches on the prefix to the topic in order to subslice
+    CLOSED: [2017-03-16 Thu 09:51]
+    the message, removing the topic slice.
+*** DONE Messages sent by the user on the websocket do nothing.
+    CLOSED: [2017-03-16 Thu 09:51]
+*** DONE Only an authenticated user can obtain a sub River.
+    CLOSED: [2017-03-16 Thu 09:51]
+*** DONE An authenticated user can obtain more than one sub River at once.
+    CLOSED: [2017-03-16 Thu 09:51]
+*** DONE Topics are loaded by the sub river from a user bucket in streams.
+    CLOSED: [2017-03-16 Thu 09:52]
+    I.e., at an API level, the notification rivers belonging to the
+    user are interfaced via a single Stream having the user's ID.
+*** DONE Notifs can be hung up.
+    CLOSED: [2017-03-16 Thu 09:52]
+
+** Convos
+*** DONE Convos are Streams with a REST interface
+    CLOSED: [2017-03-16 Thu 09:54]
+*** DONE Convo websocket interactions are well-tested
+    CLOSED: [2017-03-16 Thu 09:54]
+*** DONE Removing a user from a convo hangs up their convos
+    CLOSED: [2017-03-16 Thu 09:54]
+*** DONE Everything is identical to Bus rivers but:
+    CLOSED: [2017-03-16 Thu 09:54]
+**** DONE convos have their own bucket
+     CLOSED: [2017-03-16 Thu 09:54]
+**** DONE the SocketReader wraps messages with username and timestamp
+     CLOSED: [2017-03-16 Thu 09:54]
+**** DONE a Scribe connection for the convo is requested by the first to
+     CLOSED: [2017-03-16 Thu 09:54]
+     join the convo, and deleted by the last to leave
+***** Future: Scribe is a single Sub Recver which is created on init
+      and cannot be hung up, senders double-post to it
+***** DONE Present: Scribe is an orphan Bus Recver which doesn't send, is
+      CLOSED: [2017-03-16 Thu 09:55]
+      created if not present by first person to join convo, and is
+      hung up by last person to leave
+*** Convo connections time out when inactive for a while (15 min?)
+*** Convos time out when login times out
+*** DONE GET /convos/<id>/messages? ( start/end/etc )
+    CLOSED: [2017-03-16 Thu 09:55]
+**** More filters
+*** DONE Chat between two or more users (on top of streams API)
+    CLOSED: [2017-03-16 Thu 09:56]
+*** DONE Chat messages stored
+    CLOSED: [2017-03-16 Thu 09:56]
+*** DONE Chat messages queryable (backward?) by timestamp and paginated
+    CLOSED: [2017-03-16 Thu 09:56]
+*** DONE User sends {"content":"string"} which gets bound with username
+    CLOSED: [2017-03-16 Thu 09:56]
+*** DONE On malformed client message, error message is written to websocket
+    CLOSED: [2017-03-16 Thu 09:56]
+*** DONE Unregister reader on close
+    CLOSED: [2017-03-16 Thu 09:56]
+
+*** Filters on GET
+**** Sender: &sender=<userID str>
+**** Date: &begin=<RFC3999>, &end=<RFC3999>
+**** Max: &num=<int>
+**** Paginate: &per_page=<int>, &page=<int>
+**** Filter by max messages
+**** DONE Default to last 50
+     CLOSED: [2017-03-16 Thu 09:49]
+*** DONE Notify user when someone creates a convo with them
+    CLOSED: [2017-03-16 Thu 09:52]
+*** DONE Notify user when they are added to a convo
+    CLOSED: [2017-03-16 Thu 09:52]
+*** DONE Notify user when they are removed from convo
+    CLOSED: [2017-03-16 Thu 09:52]
+*** DONE Notify user when someone connects to convo
+    CLOSED: [2017-03-16 Thu 09:52]
+*** DONE Notify user when someone leaves convo
+    CLOSED: [2017-03-16 Thu 09:52]
+*** DONE Handle errors sanely
+    CLOSED: [2017-03-16 Thu 09:52]
+*** DONE Test what happens when one or more users hang up, etc
+    CLOSED: [2017-03-16 Thu 09:53]
+
+** Task
+*** DONE CRUD Task HTTP API
+    CLOSED: [2017-03-16 Thu 09:56]
+**** DONE GET /tasks ( filters )
+     CLOSED: [2017-03-16 Thu 09:56]
+***** Date: &begin=<RFC3999>, &end=<RFC3999>
+***** Overdue / Not yet due
+***** Max: &num=<int>
+***** Paginate: &per_page=<int>, &page=<int>
+**** DONE GET /tasks/:id
+     CLOSED: [2017-03-16 Thu 09:57]
+**** DONE POST /tasks
+     CLOSED: [2017-03-16 Thu 09:57]
+**** DONE DELETE /tasks/:id
+     CLOSED: [2017-03-16 Thu 09:57]
+**** DONE PUT /tasks/:id
+     CLOSED: [2017-03-16 Thu 09:57]
+
+*** DONE Create task with bounty and due date
+    CLOSED: [2017-03-16 Thu 09:58]
+*** DONE Update user profile with completed bounty
+    CLOSED: [2017-03-16 Thu 09:58]
+*** Complete item before due date, receive bounty (defer til later)
+**** Some form of contract?
+*** DONE Complete item, always receive bounty
+    CLOSED: [2017-03-16 Thu 09:59]
+*** DONE Notifications
+    CLOSED: [2017-03-16 Thu 09:59]
+**** DONE Notify on CRUD
+     CLOSED: [2017-03-16 Thu 09:59]
+**** DONE Update profile on bounty update
+     CLOSED: [2017-03-16 Thu 09:59]
+
+*** DONE Notes hash with task ID => external bucket IDs (TextBucket)
+    CLOSED: [2017-03-16 Thu 09:59]
+**** DONE Stored as Task.Resources
+     CLOSED: [2017-03-16 Thu 09:59]
+*** DONE Make sure Task.Resources is cleared before store, etc.
+    CLOSED: [2017-03-16 Thu 09:59]
+*** DONE Unit tests
+    CLOSED: [2017-03-16 Thu 09:59]
