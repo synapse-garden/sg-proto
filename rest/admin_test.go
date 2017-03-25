@@ -8,15 +8,18 @@ import (
 	htt "net/http/httptest"
 	"reflect"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/synapse-garden/sg-proto/auth"
+	"github.com/synapse-garden/sg-proto/convo"
+	"github.com/synapse-garden/sg-proto/incept"
 	"github.com/synapse-garden/sg-proto/rest"
 	"github.com/synapse-garden/sg-proto/store"
+	"github.com/synapse-garden/sg-proto/stream"
 	"github.com/synapse-garden/sg-proto/stream/river"
 	sgt "github.com/synapse-garden/sg-proto/testing"
 	"github.com/synapse-garden/sg-proto/users"
 
 	"github.com/boltdb/bolt"
+	"github.com/davecgh/go-spew/spew"
 	htr "github.com/julienschmidt/httprouter"
 	uuid "github.com/satori/go.uuid"
 	ws "golang.org/x/net/websocket"
@@ -72,6 +75,10 @@ func (s *RESTSuite) TestAdminNewLoginErrors(c *C) {
 		srv, tokens = prepAdminAPI(c, r, api, "bob", "bodie")
 	)
 	defer srv.Close()
+	defer cleanupAdminAPI(c, api)
+
+	uu := uuid.NewV4()
+	tok := auth.Token(uu[:])
 
 	for i, test := range []struct {
 		should string
@@ -81,6 +88,7 @@ func (s *RESTSuite) TestAdminNewLoginErrors(c *C) {
 		body             interface{}
 		expectStatus     int
 		into, expectResp interface{}
+		expectHeaders    []http.Header
 	}{{
 		should: "reject non-admin token",
 		verb:   "POST", path: "/admin/logins",
@@ -92,10 +100,10 @@ func (s *RESTSuite) TestAdminNewLoginErrors(c *C) {
 	}, {
 		should: "reject bad admin token",
 		verb:   "POST", path: "/admin/logins",
-		header:       sgt.Admin(auth.Token("haha")),
+		header:       sgt.Admin(tok),
 		expectStatus: http.StatusUnauthorized,
 		into:         new(string),
-		expectResp:   "no such admin token `haha`\n",
+		expectResp:   "no such admin token `" + tok.String() + "`\n",
 	}, {
 		should: "reject wrong HTTP method",
 		verb:   "GET", path: "/admin/logins",
@@ -103,6 +111,10 @@ func (s *RESTSuite) TestAdminNewLoginErrors(c *C) {
 		expectStatus: http.StatusMethodNotAllowed,
 		into:         new(string),
 		expectResp:   "Method Not Allowed\n",
+		expectHeaders: []http.Header{
+			sgt.FailHeader,
+			sgt.Options("POST", "OPTIONS"),
+		},
 	}, {
 		should: "error on bad body",
 		verb:   "POST", path: "/admin/logins",
@@ -133,10 +145,9 @@ func (s *RESTSuite) TestAdminNewLoginErrors(c *C) {
 			test.into, test.expectResp,
 			test.expectStatus,
 			test.header,
+			test.expectHeaders...,
 		), IsNil)
 	}
-
-	cleanupAdminAPI(c, api)
 }
 
 func (s *RESTSuite) TestAdminNewLoginWorks(c *C) {
@@ -151,6 +162,7 @@ func (s *RESTSuite) TestAdminNewLoginWorks(c *C) {
 		intoSession = new(auth.Session)
 	)
 	defer srv.Close()
+	defer cleanupAdminAPI(c, api)
 
 	newLogin := &auth.Login{
 		User:   users.User{Name: "bodo"},
@@ -187,8 +199,6 @@ func (s *RESTSuite) TestAdminNewLoginWorks(c *C) {
 		http.StatusOK,
 		sgt.Bearer(expectSession.Token),
 	), IsNil)
-
-	cleanupAdminAPI(c, api)
 }
 
 func (s *RESTSuite) TestAdminPatchProfile(c *C) {
@@ -217,6 +227,16 @@ func (s *RESTSuite) TestAdminPatchProfile(c *C) {
 	)
 	c.Assert(err, IsNil)
 
+	defer func() {
+		c.Assert(connBodie.Close(), IsNil)
+		c.Assert(connBob.Close(), IsNil)
+
+		cleanupAdminAPI(c, api)
+	}()
+
+	uu := uuid.NewV4()
+	tok := auth.Token(uu[:])
+
 	for i, test := range []struct {
 		should string
 
@@ -225,7 +245,8 @@ func (s *RESTSuite) TestAdminPatchProfile(c *C) {
 		expectStatus     int
 		into, expectResp interface{}
 
-		expectNotifs map[*ws.Conn][]*store.ResourceBox
+		expectNotifs  map[*ws.Conn][]*store.ResourceBox
+		expectHeaders []http.Header
 	}{{
 		should: "reject non-admin token",
 		verb:   "PATCH", path: "/admin/profiles/foo",
@@ -237,10 +258,10 @@ func (s *RESTSuite) TestAdminPatchProfile(c *C) {
 	}, {
 		should: "reject bad admin token",
 		verb:   "PATCH", path: "/admin/profiles/foo",
-		header:       sgt.Admin(auth.Token("haha")),
+		header:       sgt.Admin(tok),
 		expectStatus: http.StatusUnauthorized,
 		into:         new(string),
-		expectResp:   "no such admin token `haha`\n",
+		expectResp:   "no such admin token `" + tok.String() + "`\n",
 	}, {
 		should: "reject wrong HTTP method",
 		verb:   "GET", path: "/admin/profiles/foo",
@@ -248,6 +269,10 @@ func (s *RESTSuite) TestAdminPatchProfile(c *C) {
 		expectStatus: http.StatusMethodNotAllowed,
 		into:         new(string),
 		expectResp:   "Method Not Allowed\n",
+		expectHeaders: []http.Header{
+			sgt.FailHeader,
+			sgt.Options("PATCH", "OPTIONS"),
+		},
 	}, {
 		should: "error on no user",
 		verb:   "PATCH", path: "/admin/profiles",
@@ -320,6 +345,7 @@ func (s *RESTSuite) TestAdminPatchProfile(c *C) {
 			test.into, test.expectResp,
 			test.expectStatus,
 			test.header,
+			test.expectHeaders...,
 		), IsNil)
 
 		for conn, expects := range test.expectNotifs {
@@ -362,9 +388,176 @@ func (s *RESTSuite) TestAdminPatchProfile(c *C) {
 			}
 		}
 	}
+}
 
-	c.Assert(connBodie.Close(), IsNil)
-	c.Assert(connBob.Close(), IsNil)
+func (s *RESTSuite) TestAdminDeleteUser(c *C) {
+	var (
+		tokenUUID   = uuid.NewV4()
+		adminKey    = auth.Token(tokenUUID[:])
+		api         = &rest.Admin{Token: adminKey, DB: s.db}
+		r           = htr.New()
+		srv, tokens = prepAdminAPI(c, r, api, "bob", "bodie")
+		convoAPI    = &rest.Convo{DB: s.db}
+		convoErr    = convoAPI.Bind(r)
+		notifErr    = rest.Notif{DB: s.db}.Bind(r)
+	)
+	defer srv.Close()
+	defer cleanupConvoAPI(c, *convoAPI)
+	defer cleanupAdminAPI(c, api)
 
-	cleanupAdminAPI(c, api)
+	c.Assert(convoErr, IsNil)
+	c.Assert(notifErr, IsNil)
+
+	// Create a convo to connect to.
+	toPOST := &convo.Convo{Group: users.Group{
+		Owner:   "bodie",
+		Readers: map[string]bool{"bodie": true, "bob": true},
+		Writers: map[string]bool{"bodie": true, "bob": true},
+	}}
+
+	// POST the new Convo to Create it.
+	send, err := json.Marshal(toPOST)
+	c.Assert(err, IsNil)
+
+	req := htt.NewRequest("POST", "/convos", bytes.NewBuffer(send))
+	req.Header = sgt.Bearer(tokens["bodie"])
+	w := htt.NewRecorder()
+	r.ServeHTTP(w, req)
+	c.Check(w.Code, Equals, http.StatusOK)
+
+	// Make sure it worked.
+	got := new(convo.Convo)
+	c.Assert(json.Unmarshal(w.Body.Bytes(), got), IsNil)
+	c.Check(got.Owner, Equals, toPOST.Owner)
+	c.Check(got.Writers, DeepEquals, toPOST.Writers)
+	c.Check(got.Readers, DeepEquals, toPOST.Readers)
+
+	// Get two websocket connections.
+	conn1, err := sgt.GetWSClient(
+		base64.RawURLEncoding.EncodeToString(tokens["bodie"]),
+		srv.URL+"/convos/"+got.ID+"/start",
+	)
+	c.Assert(err, IsNil)
+	conn2, err := sgt.GetWSClient(
+		base64.RawURLEncoding.EncodeToString(tokens["bob"]),
+		srv.URL+"/convos/"+got.ID+"/start",
+	)
+	c.Assert(err, IsNil)
+
+	// Make sure sending and receiving works for both.
+	c.Assert(ws.JSON.Send(conn1, stream.Message{Content: "hello"}), IsNil)
+	msgGot := new(convo.Message)
+	c.Assert(ws.JSON.Receive(conn2, msgGot), IsNil)
+	c.Check(msgGot.Sender, Equals, "bodie")
+
+	c.Assert(ws.JSON.Send(conn2, stream.Message{Content: "hello"}), IsNil)
+	c.Assert(ws.JSON.Receive(conn1, msgGot), IsNil)
+	c.Check(msgGot.Sender, Equals, "bob")
+
+	// Get a notifs connection to see bodie be removed.
+	wsToken := base64.RawURLEncoding.EncodeToString(tokens["bob"])
+	bobNotif, err := sgt.GetWSClient(wsToken, srv.URL+"/notifs")
+	c.Assert(err, IsNil)
+
+	// Bad admin key should be rejected.
+	uu := uuid.NewV4()
+	someToken := auth.Token(uu[:])
+
+	c.Assert(sgt.ExpectResponse(r,
+		"/admin/users/bodie", "DELETE", nil,
+		new(string),
+		"no such admin token `"+someToken.String()+"`\n",
+		http.StatusUnauthorized,
+		sgt.Admin(someToken),
+	), IsNil)
+
+	// Convos still work, user still exists.
+	c.Assert(ws.JSON.Send(conn1, stream.Message{Content: "hello"}), IsNil)
+	c.Assert(ws.JSON.Receive(conn2, msgGot), IsNil)
+	c.Check(msgGot.Sender, Equals, "bodie")
+
+	c.Assert(ws.JSON.Send(conn2, stream.Message{Content: "hello"}), IsNil)
+	c.Assert(ws.JSON.Receive(conn1, msgGot), IsNil)
+	c.Check(msgGot.Sender, Equals, "bob")
+
+	// Good admin key permits DELETE of user.
+	c.Assert(sgt.ExpectResponse(r,
+		"/admin/users/bodie", "DELETE", nil,
+		new(string), "",
+		http.StatusOK,
+		sgt.Admin(adminKey),
+	), IsNil)
+
+	// bob sees a hangup notif for bodie.
+	intoNotif := new(store.ResourceBox)
+	c.Assert(ws.JSON.Receive(bobNotif, intoNotif), IsNil)
+	c.Check(intoNotif, DeepEquals, &store.ResourceBox{
+		Name: "convo-disconnected",
+		Contents: map[string]interface{}{
+			"userID":  "bodie",
+			"convoID": got.ID,
+		}},
+	)
+
+	// Create a valid ticket for incept attempt.
+	tick := incept.Ticket(uuid.NewV4())
+	c.Assert(s.db.Update(incept.NewTickets(tick)), IsNil)
+
+	// Bind the Incept API for testing.
+	c.Assert(rest.Incept{DB: api.DB}.Bind(r), IsNil)
+
+	// bodie's login is disabled; new bodie user cannot be created;
+	// bodie's sessions are cleared.
+	for i, test := range []struct {
+		should string
+
+		verb, path             string
+		header                 http.Header
+		expectStatus           int
+		body, into, expectResp interface{}
+		expectHeaders          []http.Header
+	}{{
+		should: "fail to auth now; bodie's token is gone",
+		verb:   "GET", path: "/profile",
+		header:       sgt.Bearer(tokens["bodie"]),
+		expectStatus: http.StatusUnauthorized,
+		into:         new(string),
+		expectResp:   "invalid session token\n",
+	}, {
+		should: "fail to POST to /tokens now, login disabled",
+		verb:   "POST", path: "/tokens",
+		body: auth.Login{
+			User:   users.User{Name: "bodie"},
+			PWHash: sgt.Sha256("some-password"),
+		},
+		expectStatus: http.StatusUnauthorized,
+		into:         new(string),
+		expectResp:   "login for user `bodie` disabled\n",
+	}, {
+		should: "not permit user creation with DELETEd name",
+		verb:   "POST", path: "/incept/" + tick.String(),
+		expectStatus: http.StatusConflict,
+		body: auth.Login{
+			User:   users.User{Name: "bodie"},
+			PWHash: sgt.Sha256("dadada"),
+		},
+		into:       new(string),
+		expectResp: "login for user `bodie` already exists\n",
+	}} {
+		c.Logf("test %d: %s on %s should %s", i,
+			test.verb, test.path,
+			test.should,
+		)
+		c.Assert(sgt.ExpectResponse(r,
+			test.path, test.verb, test.body,
+			test.into, test.expectResp,
+			test.expectStatus,
+			test.header,
+			test.expectHeaders...,
+		), IsNil)
+	}
+
+	c.Assert(conn1.Close(), IsNil)
+	c.Assert(conn2.Close(), IsNil)
+	c.Assert(bobNotif.Close(), IsNil)
 }
