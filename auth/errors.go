@@ -2,6 +2,18 @@ package auth
 
 import "fmt"
 
+func IsDisabled(err error) bool {
+	if err == nil {
+		return false
+	}
+	_, ok := err.(ErrDisabled)
+	return ok
+}
+
+type ErrDisabled string
+
+func (e ErrDisabled) Error() string { return fmt.Sprintf("login for user %#q disabled", string(e)) }
+
 func IsExists(err error) bool {
 	if err == nil {
 		return false

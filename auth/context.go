@@ -1,10 +1,12 @@
 package auth
 
 import (
+	"encoding/json"
 	"fmt"
 
-	"github.com/boltdb/bolt"
 	"github.com/synapse-garden/sg-proto/store"
+
+	"github.com/boltdb/bolt"
 )
 
 const (
@@ -52,6 +54,31 @@ func (c *Context) ByField(field CtxField) interface{} {
 	}[field]
 }
 
+type Found Context
+
+func (Found) Error() string { return "" }
+
+// FindContext retrieves a context by UserID.  This might take a while
+// if there are a lot of stored contexts.
+func FindContext(id string) store.Mutation {
+	return func(tx *bolt.Tx) error {
+		ctx := new(Context)
+		err := tx.Bucket(ContextBucket).ForEach(
+			func(k, v []byte) error {
+				if err := json.Unmarshal(v, ctx); err != nil {
+					return err
+				}
+				if ctx.UserID == id {
+					return Found(*ctx)
+				}
+
+				return nil
+			})
+
+		return err
+	}
+}
+
 func SaveContext(c *Context) func(*bolt.Tx) error {
 	return store.Marshal(ContextBucket, c, c.Token)
 }
@@ -64,4 +91,8 @@ func GetContext(c *Context, t Token) func(*bolt.Tx) error {
 		}
 		return err
 	}
+}
+
+func DeleteContext(t Token) func(*bolt.Tx) error {
+	return store.Delete(ContextBucket, t)
 }

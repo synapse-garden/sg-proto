@@ -19,18 +19,9 @@ var LoginBucket = store.Bucket("logins")
 // Login is a record of a User authentication.  It is a User with a PWHash.
 type Login struct {
 	users.User
-	PWHash []byte    `json:"pwhash"`
-	Salt   uuid.UUID `json:"salt"`
-}
-
-func CheckLoginExists(l *Login) func(*bolt.Tx) error {
-	return func(tx *bolt.Tx) error {
-		err := store.CheckExists(LoginBucket, []byte(l.Name))(tx)
-		if store.IsMissing(err) {
-			return ErrMissing(l.Name)
-		}
-		return err
-	}
+	Disabled bool      `json:"disabled,omitempty"`
+	PWHash   []byte    `json:"pwhash"`
+	Salt     uuid.UUID `json:"salt"`
 }
 
 func CheckLoginNotExist(l *Login) func(*bolt.Tx) error {
@@ -55,14 +46,17 @@ func ValidateNew(l *Login) error {
 	return users.ValidateNew(&(l.User))
 }
 
-func Check(l *Login) func(*bolt.Tx) error {
+func Check(l *Login) store.View {
 	return func(tx *bolt.Tx) error {
 		got := new(Login)
 		err := store.Unmarshal(LoginBucket, got, []byte(l.Name))(tx)
-		if store.IsMissing(err) {
+		switch {
+		case store.IsMissing(err):
 			return ErrMissing(l.Name)
-		} else if err != nil {
+		case err != nil:
 			return err
+		case got.Disabled:
+			return ErrDisabled(l.Name)
 		}
 		cmp := sha256.Sum256(append(l.PWHash, got.Salt.Bytes()...))
 		if !bytes.Equal(got.PWHash, cmp[:]) {
@@ -90,6 +84,87 @@ func Create(l *Login, salt uuid.UUID) func(*bolt.Tx) error {
 	}
 }
 
-func Delete(l *Login) func(*bolt.Tx) error {
-	return store.Delete(LoginBucket, []byte(l.Name))
+type tokens struct {
+	ts []Token
+	rs []Token
+}
+
+func (c *tokens) Find(userID string) store.View {
+	return store.ForEach(ContextBucket, func(_, v []byte) error {
+		var into Context
+		if err := json.Unmarshal(v, &into); err != nil {
+			return err
+		}
+
+		if into.UserID == userID {
+			c.ts = append(c.ts, into.Token)
+			c.rs = append(c.rs, into.RefreshToken)
+		}
+
+		// TODO: Why am I broken?  I find the things, but other
+		// callers don't see them in me any more.
+
+		return nil
+	})
+}
+
+func (c *tokens) DeleteRefresh(tx *bolt.Tx) error {
+	b := tx.Bucket(RefreshBucket)
+	for _, r := range c.rs {
+		if err := b.Delete(r); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *tokens) DeleteSessions(tx *bolt.Tx) error {
+	b := tx.Bucket(SessionBucket)
+	for _, t := range c.ts {
+		if err := b.Delete(t); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *tokens) DeleteContexts(tx *bolt.Tx) error {
+	b := tx.Bucket(ContextBucket)
+	for _, t := range c.ts {
+		if err := b.Delete(t); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func Disable(userID string) store.Mutation {
+	all := new(tokens)
+	return store.Wrap(
+		disableLogin(userID),
+		all.Find(userID),
+		all.DeleteRefresh,
+		all.DeleteSessions,
+		all.DeleteContexts,
+	)
+}
+
+func disableLogin(userID string) store.Mutation {
+	return func(tx *bolt.Tx) error {
+		into := new(Login)
+		bID := []byte(userID)
+		err := store.Unmarshal(LoginBucket, into, bID)(tx)
+		switch {
+		case store.IsMissing(err):
+			return nil
+		case err != nil:
+			return err
+		}
+
+		into.Disabled = true
+		return store.Marshal(LoginBucket, into, bID)(tx)
+	}
 }
