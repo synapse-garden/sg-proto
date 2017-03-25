@@ -276,6 +276,7 @@ func (s *RESTSuite) TestConvoDelete(c *C) {
 		nil, "", "",
 		http.StatusOK,
 		sgt.Bearer(tokens["bodie"]),
+		http.Header{},
 	), IsNil)
 
 	// After the convo is DELETEd, it is not found (404.)

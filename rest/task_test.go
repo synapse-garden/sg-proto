@@ -299,7 +299,8 @@ func (s *RESTSuite) TestTaskBind(c *C) {
 		expectStatus     int
 		into, expectResp interface{}
 
-		expectNotifs map[*ws.Conn][]*store.ResourceBox
+		expectNotifs  map[*ws.Conn][]*store.ResourceBox
+		expectHeaders []http.Header
 	}{{
 		should: "return [] when none exist for user",
 		verb:   "GET", path: "/tasks",
@@ -896,6 +897,7 @@ func (s *RESTSuite) TestTaskBind(c *C) {
 			Name:     "task-deleted",
 			Contents: uuid.UUID(got.ID).String(),
 		}}},
+		expectHeaders: []http.Header{},
 	}, {
 		should:       "not get deleted tasks",
 		verb:         "GET",
@@ -915,6 +917,7 @@ func (s *RESTSuite) TestTaskBind(c *C) {
 			test.into, test.expectResp,
 			test.expectStatus,
 			test.header,
+			test.expectHeaders...,
 		), IsNil)
 
 		for conn, expects := range test.expectNotifs {
