@@ -11,7 +11,18 @@ import (
 // Missing is an interface which can be implemented by an error value to
 // show that some IDs were missing in a survey.
 type Missing interface {
+	error
 	IDs() []uint64
+}
+
+// IsMissing returns true if the given error is a non-nil Missing error.
+func IsMissing(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	_, ok := err.(Missing)
+	return ok
 }
 
 // missing implements Missing on []uint64.
