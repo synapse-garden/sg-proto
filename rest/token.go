@@ -42,6 +42,8 @@ func (t Token) Create(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 		switch err.(type) {
 		case auth.ErrInvalid, auth.ErrMissing:
 			http.Error(w, err.Error(), http.StatusNotFound)
+		case auth.ErrDisabled:
+			http.Error(w, err.Error(), http.StatusUnauthorized)
 		default:
 			http.Error(w, errors.Wrap(
 				err, "failed to compare logins",
