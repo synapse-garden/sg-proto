@@ -312,6 +312,7 @@ func (s *RESTSuite) TestConvoHangupWhileDelete(c *C) {
 	api := rest.Convo{DB: s.db}
 	srv, tokens := prepConvoAPI(c, r, &api, "bodie")
 	defer srv.Close()
+	defer cleanupConvoAPI(c, api)
 
 	conv := &convo.Convo{Group: users.Group{
 		Owner:   "bodie",
@@ -366,10 +367,9 @@ func (s *RESTSuite) TestConvoHangupWhileDelete(c *C) {
 		nil, "", "",
 		http.StatusOK,
 		sgt.Bearer(tokens["bodie"]),
+		http.Header{},
 	), IsNil)
 
 	// Closing the other one is fine too.
 	c.Assert(conn1.Close(), IsNil)
-
-	cleanupConvoAPI(c, api)
 }
