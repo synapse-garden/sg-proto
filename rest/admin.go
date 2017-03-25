@@ -73,7 +73,7 @@ func (a *Admin) Bind(r *htr.Router) error {
 
 	r.GET("/admin/verify", mw.AuthAdmin(a.Verify, db))
 	r.POST("/admin/tickets", mw.AuthAdmin(a.NewTicket, db))
-	// r.GET("/admin/profiles", mw.AuthAdmin(a.GetAllProfiles, db))
+	r.GET("/admin/profiles", mw.AuthAdmin(a.GetAllProfiles, db))
 	// PATCH /admin/profiles/bodie?addCoin=1000 (or -1000)
 	r.PATCH("/admin/profiles/:id", mw.AuthAdmin(a.PatchProfile, db))
 	// POST a new Login with corresponding User.
@@ -145,6 +145,18 @@ func (a Admin) NewTicket(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 		http.Error(w, errors.Wrap(err, "failed to marshal new tickets after inserting").Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+func (a Admin) GetAllProfiles(w http.ResponseWriter, r *http.Request, _ htr.Params) {
+	all := users.Users{}
+	if err := a.View(all.GetAll); err != nil {
+		http.Error(w, errors.Wrap(err,
+			"failed to get all profiles",
+		).Error(), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(all)
 }
 
 // PatchProfile is a PATCH handler for an Admin to add Coin to a given

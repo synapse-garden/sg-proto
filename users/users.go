@@ -1,6 +1,7 @@
 package users
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/synapse-garden/sg-proto/store"
@@ -108,4 +109,22 @@ func AddCoin(u *User, coin int64) store.Mutation {
 
 		return store.Marshal(UserBucket, into, nbs)(tx)
 	}
+}
+
+type Users []User
+
+func (u *Users) GetAll(tx *bolt.Tx) error {
+	var next User
+	return store.ForEach(UserBucket, func(k, v []byte) error {
+		if err := json.Unmarshal(v, &next); err != nil {
+			return errors.Wrapf(err,
+				"failed to unmarshal user %#q",
+				string(k),
+			)
+		}
+
+		*u = append(*u, next)
+
+		return nil
+	})(tx)
 }

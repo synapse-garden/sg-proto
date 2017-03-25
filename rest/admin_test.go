@@ -66,6 +66,57 @@ func (s *RESTSuite) TestAdminNilDB(c *C) {
 	)
 }
 
+func (s *RESTSuite) TestAdminGetAllProfiles(c *C) {
+	var (
+		tokenUUID = uuid.NewV4()
+		adminKey  = auth.Token(tokenUUID[:])
+		api       = &rest.Admin{Token: adminKey, DB: s.db}
+		r         = htr.New()
+		srv, _    = prepAdminAPI(c, r, api, "bob", "bodie")
+	)
+	defer srv.Close()
+	defer cleanupAdminAPI(c, api)
+
+	uu := uuid.NewV4()
+	tok := auth.Token(uu[:])
+
+	for i, test := range []struct {
+		should string
+
+		path             string
+		header           http.Header
+		expectStatus     int
+		into, expectResp interface{}
+		expectHeaders    []http.Header
+	}{{
+		should:       "reject bad admin token",
+		path:         "/admin/profiles",
+		header:       sgt.Admin(tok),
+		expectStatus: http.StatusUnauthorized,
+		into:         new(string),
+		expectResp:   "no such admin token `" + tok.String() + "`\n",
+	}, {
+		should:       "get all User profiles with good token",
+		path:         "/admin/profiles",
+		header:       sgt.Admin(adminKey),
+		expectStatus: http.StatusOK,
+		into:         new([]users.User),
+		expectResp:   &([]users.User{{Name: "bob"}, {Name: "bodie"}}),
+	}} {
+		c.Logf("test %d: %s on %s should %s", i,
+			"GET", test.path,
+			test.should,
+		)
+		c.Assert(sgt.ExpectResponse(r,
+			test.path, "GET", nil,
+			test.into, test.expectResp,
+			test.expectStatus,
+			test.header,
+			test.expectHeaders...,
+		), IsNil)
+	}
+}
+
 func (s *RESTSuite) TestAdminNewLoginErrors(c *C) {
 	var (
 		tokenUUID   = uuid.NewV4()
@@ -275,7 +326,7 @@ func (s *RESTSuite) TestAdminPatchProfile(c *C) {
 		},
 	}, {
 		should: "error on no user",
-		verb:   "PATCH", path: "/admin/profiles",
+		verb:   "PATCH", path: "/admin/profiles/",
 		header:       sgt.Admin(adminKey),
 		expectStatus: http.StatusNotFound,
 		into:         new(string),
