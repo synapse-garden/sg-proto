@@ -90,13 +90,40 @@ SG-Proto Orgfile
 **** Stop returning bools from websocket Conn reader
 
 ** Unorganized
-
 *** Organize TODOs
 
 *** Cloud (self?) deploy service
 
 *** Better testing of REST resource security.
+*** More auth.Login tests
+*** Ledger?
+*** Make sure all empty GETs return [], not null
+*** Future: Scribe is a single Sub Recver which is created on init
+    and cannot be hung up, senders double-post to it
+*** Update README.md and CONTRIBUTING.md, clean up 0.0.1 TODO
+*** Log ERROR statements on all unexpected internal errors
+*** Make sure not just anyone can get a refresh token
+*** Comment all exported functions, types, methods, and constants
+*** Tighten up Convo REST API, add deferred cleanups
+*** GET /admin/tickets?per_page=n&page=m
+*** Performance is weak (~30ms on GET on /source)
+**** Is it just Postman?
+**** Benchmarking?
+**** Bolt?
+***** Configure cache settings?
+*** POST to /tokens should return any valid existing token of user.
+**** Debatable.  Tokens come with timeouts which are unchanged.
+**** If user is using a refresh token, it will refresh;
+**** For now, this isn't really a "bug".  It just means tokens bucket
+     can get overfull.
+*** Diagnose occasional test failures in RiverSuite.TestNewBus
+*** If a survey has a problem, responders are in an unknown state.
+*** Old Bus buckets should be deleted after the convo or stream is deleted.
+*** Bad usernames cannot be looked up for expired Sessions
+**** This is just a reverse lookup.
+**** Can't find example of why this is a bug.
 *** If database is closed, can't clean up rivers
+*** No auth timeout / river / notifs closure
 *** User set type
 *** Think about true vs false users in groups -- use slice in API?
 *** Think about compressing Notes.
@@ -186,8 +213,44 @@ SG-Proto Orgfile
 *** Thoroughly test ws package
 *** client package uses custom HTTP client instead of global
 
+* v0.0.2
+** TODO More auth.Login tests
+** TODO Test HandleDeleteToken (URL encoding, etc.)
+** TODO Don't check whether token is valid in REST since this is in mw.
+** TODO Update store.Version
+** TODO Incept PunchTicket "punch"
+   Should "punch" the Ticket so Admin API can see how many users
+   created / reissue tickets / etc.?
+** TODO Update login with new password
+** TODO List users connected to Convo (maybe a field in the Convo?)
+** TODO Delete meta buckets on Convo close.
+** TODO Close running stream ("river") from API (use Survey/Resp)
+** TODO Removing a user from a Stream hangs up the user's Stream bindings
+** TODO Use https://golang.org/pkg/net/http/httptrace/ for REST test?
+** TODO Inactive Rivers eventually time out
+** TODO Convo connections time out when inactive for a while (15 min?)
+** TODO Convos time out when login times out
+** TODO Find all Convos
+** TODO Close all Convos
+** TODO Convo Messages GET filters
+*** Sender: &sender=<userID str>
+*** Date: &begin=<RFC3999>, &end=<RFC3999>
+*** Max: &num=<int>
+*** Paginate: &per_page=<int>, &page=<int>
+*** Filter by max messages
+** TODO Complete Task item before due date, receive bounty (defer til later)
+*** Some form of contract?
+
+** TODO Task GET filters
+*** Date: &begin=<RFC3999>, &end=<RFC3999>
+*** Overdue / Not yet due
+*** Max: &num=<int>
+*** Paginate: &per_page=<int>, &page=<int>
+** TODO Migration tests
+
 * v0.0.1
-** Bugs
+** DONE Bugs
+   CLOSED: [2017-03-25 Sat 18:03]
 
 *** DONE Fix Windows timestamp UUID generation (use uuid.NewV4)
     CLOSED: [2017-03-16 Thu 09:23]
@@ -275,27 +338,24 @@ SG-Proto Orgfile
     CLOSED: [2017-03-16 Thu 09:28]
 *** DONE Refresh token auth middleware doesn't work
     CLOSED: [2017-03-16 Thu 09:28]
-*** No auth timeout / river / notifs closure
-*** Old Bus buckets should be deleted after the convo or stream is deleted.
-*** Diagnose occasional test failures in RiverSuite.TestNewBus
-*** Deleting the user's profile doesn't close his Streams.
+*** DONE Deleting the user's profile doesn't close his Streams.
+    CLOSED: [2017-03-25 Sat 17:41]
 **** DONE Surveyor / Respondent don't keep track of who's still alive.  If a
      CLOSED: [2017-03-16 Thu 09:29]
      Responder removes itself from its bucket, the Survey will fail.
      STATUS: "Solved" by post-check if some didn't respond.
-*** If a survey has a problem, responders are in an unknown state.
-*** Refresh tokens must be able to be invalidated
-*** POST to /tokens should return any valid existing token of user.
-*** Performance is terrible (~30ms on GET on /source???)
-**** Is it just Postman?
-**** Benchmarking?
-**** Bolt?
-***** Configure cache settings?
-*** Deleting the user's profile doesn't eliminate his owned objects
+*** DONE Refresh tokens must be able to be invalidated
+    CLOSED: [2017-03-25 Sat 17:41]
+**** Can be done by disabling user's profile
+**** Better if they could do it themselves without deleting profile, too
+*** DONE Deleting the user's profile doesn't eliminate his owned objects
+    CLOSED: [2017-03-25 Sat 17:44]
     and open rivers
-*** Bad usernames cannot be looked up for expired Sessions
+**** Solved by disabling login and deleting user; usernames can't be
+     reused.
 
-** Admin API
+** DONE Admin API
+   CLOSED: [2017-03-25 Sat 18:03]
 *** DONE AuthAdmin middleware
     CLOSED: [2017-03-16 Thu 09:29]
 *** DONE Create ticket
@@ -304,8 +364,8 @@ SG-Proto Orgfile
     CLOSED: [2017-03-16 Thu 09:29]
 *** DONE POST /admin/profiles users.User to create User without Ticket
     CLOSED: [2017-03-16 Thu 09:29]
-*** GET /admin/tickets?per_page=n&page=m
-*** TODO GET /admin/profiles
+*** DONE GET /admin/profiles
+    CLOSED: [2017-03-25 Sat 17:31]
 *** DONE Delete ticket(s)
     CLOSED: [2017-03-16 Thu 09:30]
 *** DONE Master API key printed on startup?
@@ -321,35 +381,30 @@ SG-Proto Orgfile
 **** DONE Add feature to disable logins
      CLOSED: [2017-03-25 Sat 14:01]
 
-** Code quality / package sanitation
+** DONE Code quality / package sanitation
+   CLOSED: [2017-03-25 Sat 18:20]
 *** DONE Split Streams and Rivers
     CLOSED: [2017-03-16 Thu 09:49]
-*** Make sure all empty GETs return [], not null
-*** Tighten up Convo REST API, add deferred cleanups
-*** Update README.md and CONTRIBUTING.md, clean up 0.0.1 TODO
-*** Comment all exported functions, types, methods, and constants
-*** Make sure not just anyone can get a refresh token
-*** Log ERROR statements on all unexpected internal errors
-*** Update store.Version
+*** DONE Update store.Version
+    CLOSED: [2017-03-25 Sat 18:20]
 
-** GPL
+** DONE GPL
+   CLOSED: [2017-03-25 Sat 18:06]
 *** DONE Host own source code under /source or some such.
     CLOSED: [2017-03-16 Thu 09:31]
 
-** Login / Session / Logout
+** DONE Login / Session / Logout
+   CLOSED: [2017-03-25 Sat 18:06]
 *** DONE Clear out old session tokens on startup
     CLOSED: [2017-03-16 Thu 09:31]
 *** DONE auth.Session API
     CLOSED: [2017-03-16 Thu 09:31]
-*** auth.Login tests
 *** DONE Delineate split between account (users.User) and auth.Login
     CLOSED: [2017-03-16 Thu 09:31]
 *** DONE Session auth middleware
     CLOSED: [2017-03-16 Thu 09:31]
-*** Test HandleDeleteToken (URL encoding, etc.)
 *** DONE Session key => session context (user ID, etc.) lookup
     CLOSED: [2017-03-16 Thu 09:31]
-*** TODO Don't check whether token is valid in REST since this is in mw.
 *** DONE API to delete all tokens (and refresh) for user ID.
     CLOSED: [2017-03-25 Sat 14:01]
 *** DONE Check whether login is disabled when trying to create token.
@@ -364,11 +419,11 @@ SG-Proto Orgfile
      - This could be handled by finding all Contexts for the user,
        and deleting all their associated Tokens and RefreshTokens.
 
-** Account
-*** incept.PunchTicket
-*** Currently just deletes the Ticket
-*** Should "punch" the Ticket so Admin API can see how many users
-    created / reissue tickets / etc.?
+** DONE Account
+   CLOSED: [2017-03-25 Sat 18:09]
+*** DONE incept.PunchTicket
+    CLOSED: [2017-03-25 Sat 18:08]
+**** Currently just deletes the Ticket
 *** DONE Disable user login
     CLOSED: [2017-03-25 Sat 14:02]
 **** DONE Only able to log in if not disabled.
@@ -391,7 +446,8 @@ SG-Proto Orgfile
 *** DONE Test rest.Incept auth.Login creation
     CLOSED: [2017-03-16 Thu 09:32]
 
-** Profile
+** DONE Profile
+   CLOSED: [2017-03-25 Sat 18:10]
 *** DONE GET /profile
     CLOSED: [2017-03-16 Thu 09:50]
 *** DONE DELETE /profile
@@ -408,10 +464,8 @@ SG-Proto Orgfile
     CLOSED: [2017-03-16 Thu 09:50]
 **** TODO Notify on profile disable
 
-*** Update with new password
-
-** Ledger?
-** Streams
+** DONE Streams
+   CLOSED: [2017-03-25 Sat 18:11]
 *** DONE Stream has multiple Rivers
     CLOSED: [2017-03-16 Thu 09:46]
 *** DONE Rivers can be created and deleted, and dial one another using
@@ -437,15 +491,9 @@ SG-Proto Orgfile
     CLOSED: [2017-03-16 Thu 09:48]
 *** DONE Stream members are notified when a user leaves a Stream
     CLOSED: [2017-03-16 Thu 09:48]
-*** List users connected to Convo (maybe a field in the Convo?)
-*** Delete meta buckets on Convo close.
-*** Close running stream ("river") from API (use Survey/Resp)
-*** Removing a user from a Stream hangs up the user's Stream bindings
-*** Use https://golang.org/pkg/net/http/httptrace/ for REST test?
-*** Inactive Rivers eventually time out
 
-** Notifications
-
+** DONE Notifications
+   CLOSED: [2017-03-25 Sat 18:11]
 *** DONE notif.MakeUserTopic returns a notif.UserTopic generated uniquely
     CLOSED: [2017-03-16 Thu 09:51]
     using "USER"+BLAKE2(id).
@@ -481,7 +529,8 @@ SG-Proto Orgfile
 *** DONE Notifs can be hung up.
     CLOSED: [2017-03-16 Thu 09:52]
 
-** Convos
+** DONE Convos
+   CLOSED: [2017-03-25 Sat 18:14]
 *** DONE Convos are Streams with a REST interface
     CLOSED: [2017-03-16 Thu 09:54]
 *** DONE Convo websocket interactions are well-tested
@@ -497,19 +546,12 @@ SG-Proto Orgfile
 **** DONE a Scribe connection for the convo is requested by the first to
      CLOSED: [2017-03-16 Thu 09:54]
      join the convo, and deleted by the last to leave
-***** Future: Scribe is a single Sub Recver which is created on init
-      and cannot be hung up, senders double-post to it
 ***** DONE Present: Scribe is an orphan Bus Recver which doesn't send, is
       CLOSED: [2017-03-16 Thu 09:55]
       created if not present by first person to join convo, and is
       hung up by last person to leave
-*** Convo connections time out when inactive for a while (15 min?)
-*** Convos time out when login times out
-*** Find all Convos
-*** Close all Convos
 *** DONE GET /convos/<id>/messages? ( start/end/etc )
     CLOSED: [2017-03-16 Thu 09:55]
-**** More filters
 *** DONE Chat between two or more users (on top of streams API)
     CLOSED: [2017-03-16 Thu 09:56]
 *** DONE Chat messages stored
@@ -523,14 +565,9 @@ SG-Proto Orgfile
 *** DONE Unregister reader on close
     CLOSED: [2017-03-16 Thu 09:56]
 
-*** Filters on GET
-**** Sender: &sender=<userID str>
-**** Date: &begin=<RFC3999>, &end=<RFC3999>
-**** Max: &num=<int>
-**** Paginate: &per_page=<int>, &page=<int>
-**** Filter by max messages
+*** DONE Filters on GET
+    CLOSED: [2017-03-25 Sat 18:12]
 **** DONE Default to last 50
-     CLOSED: [2017-03-16 Thu 09:49]
 *** DONE Notify user when someone creates a convo with them
     CLOSED: [2017-03-16 Thu 09:52]
 *** DONE Notify user when they are added to a convo
@@ -546,15 +583,12 @@ SG-Proto Orgfile
 *** DONE Test what happens when one or more users hang up, etc
     CLOSED: [2017-03-16 Thu 09:53]
 
-** Task
+** DONE Task
+   CLOSED: [2017-03-25 Sat 18:15]
 *** DONE CRUD Task HTTP API
     CLOSED: [2017-03-16 Thu 09:56]
 **** DONE GET /tasks ( filters )
      CLOSED: [2017-03-16 Thu 09:56]
-***** Date: &begin=<RFC3999>, &end=<RFC3999>
-***** Overdue / Not yet due
-***** Max: &num=<int>
-***** Paginate: &per_page=<int>, &page=<int>
 **** DONE GET /tasks/:id
      CLOSED: [2017-03-16 Thu 09:57]
 **** DONE POST /tasks
@@ -568,8 +602,6 @@ SG-Proto Orgfile
     CLOSED: [2017-03-16 Thu 09:58]
 *** DONE Update user profile with completed bounty
     CLOSED: [2017-03-16 Thu 09:58]
-*** Complete item before due date, receive bounty (defer til later)
-**** Some form of contract?
 *** DONE Complete item, always receive bounty
     CLOSED: [2017-03-16 Thu 09:59]
 *** DONE Notifications
@@ -587,3 +619,5 @@ SG-Proto Orgfile
     CLOSED: [2017-03-16 Thu 09:59]
 *** DONE Unit tests
     CLOSED: [2017-03-16 Thu 09:59]
+** TODO Deploy
+*** 
