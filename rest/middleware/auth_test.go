@@ -18,6 +18,7 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/julienschmidt/httprouter"
+	uuid "github.com/satori/go.uuid"
 	xws "golang.org/x/net/websocket"
 	. "gopkg.in/check.v1"
 )
@@ -74,9 +75,23 @@ func (s *MiddlewareSuite) TestAuthUser(c *C) {
 	w := htt.NewRecorder()
 	middleware.AuthUser(h, s.db, middleware.CtxSetUserID)(w, r, nil)
 	c.Check(w.Body.String(), Equals, "ok")
+
+	// TODO:
 	// A request to an endpoint with the given auth scheme should
 	// be rejected if header["Authorization"] is not "Bearer" and
 	// present in the database.
+
+	uu := uuid.NewV4()
+	invalidToken := base64.StdEncoding.EncodeToString(uu[:])
+	r = htt.NewRequest("GET", "/foo", nil)
+	r.Header.Set(string(middleware.AuthHeader), fmt.Sprintf("%s %s", auth.BearerType, invalidToken))
+	h = func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		c.Check(middleware.CtxGetUserID(r), Not(Equals), "friendo")
+		w.Write([]byte("ok"))
+	}
+	w = htt.NewRecorder()
+	middleware.AuthUser(h, s.db, middleware.CtxSetUserID)(w, r, nil)
+	c.Check(w.Body.String(), Equals, "invalid session token\n")
 }
 
 func (s *MiddlewareSuite) TestAuthWS(c *C) {
