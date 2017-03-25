@@ -74,8 +74,8 @@ func Create(u *User) func(*bolt.Tx) error {
 	return store.Marshal(UserBucket, u, []byte(u.Name))
 }
 
-func Delete(u *User) func(*bolt.Tx) error {
-	return store.Delete(UserBucket, []byte(u.Name))
+func Delete(userID string) store.Mutation {
+	return store.Delete(UserBucket, []byte(userID))
 }
 
 // ValidateNew validates a new User.
