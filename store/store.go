@@ -1,6 +1,8 @@
 package store
 
 import (
+	"log"
+
 	"github.com/boltdb/bolt"
 	"github.com/pkg/errors"
 )
@@ -8,17 +10,22 @@ import (
 type Version string
 
 const (
-	VerNone       = Version("")
+	Ver001        = Version("0.0.1")
 	VerAlpha001_2 = Version("0.0.1-alpha-2")
+	VerNone       = Version("")
 
-	VerCurrent = VerAlpha001_2
+	VerCurrent = Ver001
 )
 
 var (
 	VersionBucket = []byte("version")
 
 	migrations = map[Version]map[Version]func(*bolt.Tx) error{
-		VerNone: {VerAlpha001_2: PutV(VerCurrent)},
+		VerNone: {
+			VerAlpha001_2: PutV(VerAlpha001_2),
+			Ver001:        PutV(Ver001),
+		},
+		VerAlpha001_2: {Ver001: PutV(Ver001)},
 	}
 )
 
@@ -54,6 +61,8 @@ func Migrate(v Version) func(*bolt.Tx) error {
 		if b != nil {
 			oldVer := Version(b.Get([]byte("version")))
 			if v != oldVer {
+				log.Printf("migrating from %q to %q",
+					oldVer, v)
 				return MigrateFrom(tx, oldVer, v)
 			}
 			return nil
