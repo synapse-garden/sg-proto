@@ -304,7 +304,8 @@ SG-Proto Orgfile
     CLOSED: [2017-03-16 Thu 09:29]
 *** DONE POST /admin/profiles users.User to create User without Ticket
     CLOSED: [2017-03-16 Thu 09:29]
-*** GET /tickets?per_page=n&page=m
+*** GET /admin/tickets?per_page=n&page=m
+*** TODO GET /admin/profiles
 *** DONE Delete ticket(s)
     CLOSED: [2017-03-16 Thu 09:30]
 *** DONE Master API key printed on startup?
@@ -313,6 +314,12 @@ SG-Proto Orgfile
      CLOSED: [2017-03-16 Thu 09:30]
 **** DONE Fix admin key nonsense
      CLOSED: [2017-03-16 Thu 09:30]
+*** DONE DELETE /admin/users/:id
+    CLOSED: [2017-03-16 Thu 10:07]
+**** DONE Test DELETE /admin/users/:id
+     CLOSED: [2017-03-25 Sat 14:01]
+**** DONE Add feature to disable logins
+     CLOSED: [2017-03-25 Sat 14:01]
 
 ** Code quality / package sanitation
 *** DONE Split Streams and Rivers
@@ -342,12 +349,34 @@ SG-Proto Orgfile
 *** Test HandleDeleteToken (URL encoding, etc.)
 *** DONE Session key => session context (user ID, etc.) lookup
     CLOSED: [2017-03-16 Thu 09:31]
+*** TODO Don't check whether token is valid in REST since this is in mw.
+*** DONE API to delete all tokens (and refresh) for user ID.
+    CLOSED: [2017-03-25 Sat 14:01]
+*** DONE Check whether login is disabled when trying to create token.
+    CLOSED: [2017-03-25 Sat 14:01]
+*** DONE Don't permit users to create disabled Logins.
+    CLOSED: [2017-03-25 Sat 14:01]
+*** DONE Don't permit deletion of Logins.  Disable instead, but delete the User.
+    CLOSED: [2017-03-25 Sat 14:01]
+*** DONE Resolve multi-login issue (i.e. POST to /tokens twice)
+    CLOSED: [2017-03-25 Sat 14:02]
+     - Note that Context is keyed by Bearer Token, not by UserID.
+     - This could be handled by finding all Contexts for the user,
+       and deleting all their associated Tokens and RefreshTokens.
 
 ** Account
 *** incept.PunchTicket
 *** Currently just deletes the Ticket
 *** Should "punch" the Ticket so Admin API can see how many users
     created / reissue tickets / etc.?
+*** DONE Disable user login
+    CLOSED: [2017-03-25 Sat 14:02]
+**** DONE Only able to log in if not disabled.
+     CLOSED: [2017-03-25 Sat 14:02]
+**** DONE Any login token stored for the user must be revoked.
+     CLOSED: [2017-03-25 Sat 14:02]
+**** DONE Any refresh token stored for the user must be revoked.
+     CLOSED: [2017-03-25 Sat 14:02]
 *** DONE Ticket API
     CLOSED: [2017-03-16 Thu 09:32]
 *** DONE Password hash
@@ -356,6 +385,7 @@ SG-Proto Orgfile
     CLOSED: [2017-03-16 Thu 09:32]
 *** DONE Log in
     CLOSED: [2017-03-16 Thu 09:32]
+**** TODO Only possible to log in if user not disabled.
 *** DONE Log out
     CLOSED: [2017-03-16 Thu 09:32]
 *** DONE Test rest.Incept auth.Login creation
@@ -365,12 +395,18 @@ SG-Proto Orgfile
 *** DONE GET /profile
     CLOSED: [2017-03-16 Thu 09:50]
 *** DONE DELETE /profile
-    CLOSED: [2017-03-16 Thu 09:50]
-
+    CLOSED: [2017-03-25 Sat 14:02]
+**** DONE disable the user's login
+     CLOSED: [2017-03-25 Sat 14:02]
+**** DONE delete the user's profile
+     CLOSED: [2017-03-25 Sat 14:02]
+**** DONE delete the user's sessions and their tokens
+     CLOSED: [2017-03-25 Sat 14:02]
 *** DONE Have bounty
     CLOSED: [2017-03-16 Thu 09:50]
 *** DONE User is notified when profile changes (e.g. bounty increase)
     CLOSED: [2017-03-16 Thu 09:50]
+**** TODO Notify on profile disable
 
 *** Update with new password
 
@@ -404,7 +440,6 @@ SG-Proto Orgfile
 *** List users connected to Convo (maybe a field in the Convo?)
 *** Delete meta buckets on Convo close.
 *** Close running stream ("river") from API (use Survey/Resp)
-*** Close all users' rivers from API
 *** Removing a user from a Stream hangs up the user's Stream bindings
 *** Use https://golang.org/pkg/net/http/httptrace/ for REST test?
 *** Inactive Rivers eventually time out
@@ -470,6 +505,8 @@ SG-Proto Orgfile
       hung up by last person to leave
 *** Convo connections time out when inactive for a while (15 min?)
 *** Convos time out when login times out
+*** Find all Convos
+*** Close all Convos
 *** DONE GET /convos/<id>/messages? ( start/end/etc )
     CLOSED: [2017-03-16 Thu 09:55]
 **** More filters
