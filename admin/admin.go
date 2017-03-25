@@ -17,7 +17,7 @@ var AdminBucket = store.Bucket("admin")
 type ErrNotFound auth.Token
 
 func (e ErrNotFound) Error() string {
-	return fmt.Sprintf("no such admin token %#q", string(e))
+	return fmt.Sprintf("no such admin token %#q", auth.Token(e).String())
 }
 
 func IsNotFound(e error) bool {
