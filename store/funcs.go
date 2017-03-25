@@ -117,3 +117,9 @@ func MakeNestedBucket(b *bolt.Bucket, buckets ...Bucket) (*bolt.Bucket, error) {
 	}
 	return result, nil
 }
+
+func ForEach(b Bucket, f func(k, v []byte) error) func(tx *bolt.Tx) error {
+	return func(tx *bolt.Tx) error {
+		return tx.Bucket(b).ForEach(f)
+	}
+}
