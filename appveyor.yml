@@ -24,10 +24,10 @@ install:
 
 build_script:
   - go test -v ./...
-  - go build -o buildOutput\sg -i .\sg
+  - go build -o buildOutput\sg.exe -i .\sg
 
 artifacts:
-  - path: buildOutput/sg
+  - path: buildOutput/sg.exe
     name: binary
 
 deploy:
