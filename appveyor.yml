@@ -32,7 +32,7 @@ artifacts:
 
 deploy:
   release: sg-proto_$(appveyor_build_version)
-  description: 'This is a release of my awesome application.'
+  description: 'A collaboration service.'
   provider: GitHub
   auth_token:
     secure: oYjhFLxu/bzuNM2WwT+1SDzqSabNhBx79dUB9yWR+6kqe3VQVWmkvWIpbxZ/js8Y
