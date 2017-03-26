@@ -246,6 +246,8 @@ SG-Proto Orgfile
 *** Max: &num=<int>
 *** Paginate: &per_page=<int>, &page=<int>
 ** TODO Migration tests
+** TODO Don't deliver AppVeyor binary unless the branch is merged
+** TODO Figure out travisCI build artifacts / releases
 
 * v0.0.1
 ** DONE Bugs
