@@ -141,5 +141,5 @@ func (s *ClientSuite) TestDeleteProfile(c *C) {
 	c.Check(*u, DeepEquals, l.User)
 
 	c.Assert(s.cli.DeleteProfile(), IsNil)
-	c.Check(s.db.View(users.CheckUserNotExist(u)), IsNil)
+	c.Check(s.db.View(users.CheckNotExist(u.Name)), IsNil)
 }

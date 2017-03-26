@@ -3,6 +3,7 @@ package client
 import (
 	"crypto/sha256"
 	"crypto/tls"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
@@ -161,13 +162,14 @@ func (c *Client) GetStreamWS(id string) (*ws.Conn, error) {
 	if t, ok := customClient.Transport.(*http.Transport); ok {
 		conf = t.TLSClientConfig
 	}
+
+	wsToken := base64.RawURLEncoding.EncodeToString(s.Token)
+
 	return ws.DialConfig(&ws.Config{
 		Location:  &backend,
 		Origin:    &url.URL{},
 		TlsConfig: conf,
 		Version:   ws.ProtocolVersionHybi13,
-		Header: http.Header{
-			"Authorization": {"Bearer " + s.Token.String()},
-		},
+		Protocol:  []string{"Bearer+" + wsToken},
 	})
 }

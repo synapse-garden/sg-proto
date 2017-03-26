@@ -32,7 +32,7 @@ type ClientSuite struct {
 
 var _ = Suite(&ClientSuite{})
 
-var src = &rest.SourceInfo{
+var src = rest.SourceInfo{
 	License:    "Affero GPL V3",
 	LicensedTo: "SynapseGarden 2016",
 	Location:   "https://github.com/synapse-garden/sg-proto",
