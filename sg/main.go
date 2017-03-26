@@ -5,11 +5,12 @@ import (
 	"flag"
 	"log"
 
-	uuid "github.com/satori/go.uuid"
 	"github.com/synapse-garden/sg-proto/auth"
 	"github.com/synapse-garden/sg-proto/rest"
+	"github.com/synapse-garden/sg-proto/store"
 
 	"github.com/boltdb/bolt"
+	uuid "github.com/satori/go.uuid"
 )
 
 // CLI flags
@@ -34,7 +35,7 @@ var (
 // Source constants
 const (
 	SourceLicense = "Affero GPL V3"
-	Licensee      = "SynapseGarden 2016"
+	Licensee      = "SynapseGarden 2017"
 )
 
 func main() {
@@ -46,6 +47,7 @@ func main() {
 	}
 
 	source := rest.SourceInfo{
+		Version:    store.VerCurrent,
 		Location:   *SourceLocation,
 		License:    SourceLicense,
 		LicensedTo: Licensee,

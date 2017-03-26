@@ -4,15 +4,18 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/synapse-garden/sg-proto/store"
+
 	htr "github.com/julienschmidt/httprouter"
 )
 
 // SourceInfo represents the SG-Proto source location and license, and
 // implements API.
 type SourceInfo struct {
-	License    string `json:"license"`
-	LicensedTo string `json:"licensedTo"`
-	Location   string `json:"location"`
+	Version    store.Version `json:"version"`
+	License    string        `json:"license"`
+	LicensedTo string        `json:"licensedTo"`
+	Location   string        `json:"location"`
 }
 
 // Bind implements API.Bind on SourceInfo.
