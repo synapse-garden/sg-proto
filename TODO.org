@@ -240,7 +240,6 @@ SG-Proto Orgfile
 *** Filter by max messages
 ** TODO Complete Task item before due date, receive bounty (defer til later)
 *** Some form of contract?
-
 ** TODO Task GET filters
 *** Date: &begin=<RFC3999>, &end=<RFC3999>
 *** Overdue / Not yet due
@@ -620,4 +619,3 @@ SG-Proto Orgfile
 *** DONE Unit tests
     CLOSED: [2017-03-16 Thu 09:59]
 ** TODO Deploy
-*** 
