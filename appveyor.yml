@@ -1,4 +1,4 @@
-version: "0.0.1-alpha-2-{build}"
+version: "0.0.1-{build}"
 
 platform: x64
 
@@ -12,7 +12,7 @@ environment:
   GOPATH: c:\gopath
   matrix:
   - GOARCH: amd64
-    GOVERSION: 1.7
+    GOVERSION: 1.8
 
 install:
   - set Path=c:\go\bin;%Path%
@@ -23,7 +23,7 @@ install:
   - go env
 
 build_script:
-  - go test -check.v ./...
+  - go test -v ./...
   - go build -o buildOutput\sg -i .\sg
 
 artifacts:
