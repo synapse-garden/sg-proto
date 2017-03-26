@@ -1,1 +1,20 @@
+# Swapfiles
 *.sw[nop]
+
+# Emacs tempfiles
+*~
+*#
+.#*
+
+# Golang test coverage files
+cover.out
+
+# Compiled binaries
+debug
+debug.test
+*.exe
+
+# SG Server files
+cert.key
+cert.pem
+my.db*

@@ -1,0 +1,140 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "er0In+egNah0T3R28reEOx/0Rqg=",
+			"path": "github.com/boltdb/bolt",
+			"revision": "074dffcc83e9f421e261526d297cd93f22a34080",
+			"revisionTime": "2016-10-08T15:24:23Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "Lps/+JqMRVlrXgO/+cazYcfsglg=",
+			"path": "github.com/davecgh/go-spew/spew",
+			"revision": "346938d642f2ec3594ed81d874461961cd0faa76",
+			"revisionTime": "2016-10-29T20:57:26Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "ztypj7pDqHM1CVbBfHcPRp1n+bI=",
+			"path": "github.com/droundy/goopt",
+			"revision": "e5c9ab183a102ef3ad2363b04483784258984157",
+			"revisionTime": "2015-10-12T15:57:52Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "rDx1QhM6UDraFxaRgAjdoHCYh74=",
+			"path": "github.com/go-mangos/mangos",
+			"revision": "68cfb1bd7d1f6e9958c23a6615339815187cf011",
+			"revisionTime": "2016-10-28T20:22:51Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "14BDAQQmvj2Tz1943Q4ATrSWhdg=",
+			"path": "github.com/go-mangos/mangos/protocol/bus",
+			"revision": "68cfb1bd7d1f6e9958c23a6615339815187cf011",
+			"revisionTime": "2016-10-28T20:22:51Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "hKTt3jIni1paCwD59IxQ0ZStqYk=",
+			"path": "github.com/go-mangos/mangos/protocol/pub",
+			"revision": "68cfb1bd7d1f6e9958c23a6615339815187cf011",
+			"revisionTime": "2016-10-28T20:22:51Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "M/xWQk+Cv3tAcBCEjNj2IDRGllE=",
+			"path": "github.com/go-mangos/mangos/protocol/respondent",
+			"revision": "68cfb1bd7d1f6e9958c23a6615339815187cf011",
+			"revisionTime": "2016-10-28T20:22:51Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "vN9oWDsOTIcgkFwSlzbIClyoU/w=",
+			"path": "github.com/go-mangos/mangos/protocol/sub",
+			"revision": "68cfb1bd7d1f6e9958c23a6615339815187cf011",
+			"revisionTime": "2016-10-28T20:22:51Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "XXK6UPWfycdMxcEiF5d01cP/bLE=",
+			"path": "github.com/go-mangos/mangos/protocol/surveyor",
+			"revision": "68cfb1bd7d1f6e9958c23a6615339815187cf011",
+			"revisionTime": "2016-10-28T20:22:51Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "7NRp/7iQJtQ8HcjwXGtAQzva/b8=",
+			"path": "github.com/go-mangos/mangos/transport/inproc",
+			"revision": "68cfb1bd7d1f6e9958c23a6615339815187cf011",
+			"revisionTime": "2016-10-28T20:22:51Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "VKgJ7n+9zWTjTv696ilbvLOkDpA=",
+			"path": "github.com/gorilla/websocket",
+			"revision": "2d1e4548da234d9cb742cc3628556fef86aafbac",
+			"revisionTime": "2016-09-12T15:30:41Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "Drsz3oT4NmM2tVQCRk+occxVvPA=",
+			"path": "github.com/julienschmidt/httprouter",
+			"revision": "d8ff598a019f2c7bad0980917a588193cf26666e",
+			"revisionTime": "2016-08-10T19:53:38Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "mJQtsTCZGhCmjdFtXBWryZSri/o=",
+			"path": "github.com/minio/blake2b-simd",
+			"revision": "3f5f724cb5b182a5c278d6d3d55b40e7f8c2efb4",
+			"revisionTime": "2016-07-23T06:10:19Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "Hky3u+8Rqum+wB5BHMj0A8ZmT4g=",
+			"path": "github.com/pkg/errors",
+			"revision": "17b591df37844cde689f4d5813e5cea0927d8dd2",
+			"revisionTime": "2016-08-22T09:00:10Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "zmC8/3V4ls53DJlNTKDZwPSC/dA=",
+			"path": "github.com/satori/go.uuid",
+			"revision": "0aa62d5ddceb50dbcb909d790b5345affd3669b6",
+			"revisionTime": "2016-07-13T18:03:06Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "lz2tjPljCQa8GsdeTPUj9VdkL1A=",
+			"path": "golang.org/x/net/context",
+			"revision": "71a035914f99bb58fe82eac0f1289f10963d876c",
+			"revisionTime": "2016-09-12T21:59:12Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "likOl7O0BJntqagR050kkOBuY4o=",
+			"path": "golang.org/x/net/websocket",
+			"revision": "1358eff22f0dd0c54fc521042cc607f6ff4b531a",
+			"revisionTime": "2016-09-01T04:28:38Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "QcDlr1sWBDt6Dn/v7W/MRgccAi4=",
+			"path": "golang.org/x/sys/unix",
+			"revision": "076b546753157f758b316e59bcb51e6807c04057",
+			"revisionTime": "2016-06-01T13:19:39Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "I2d7Kn572Fz02mnnlcI4MHXCu0c=",
+			"path": "gopkg.in/check.v1",
+			"revision": "4f90aeace3a26ad7021961c297b22c42160c7b25",
+			"revisionTime": "2016-01-05T16:49:36Z",
+			"tree": true
+		}
+	],
+	"rootPath": "github.com/synapse-garden/sg-proto"
+}

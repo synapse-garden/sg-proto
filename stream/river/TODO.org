@@ -1,0 +1,19 @@
+* TODO [#A] <2017-02-26 Sun> state transitions
+** User connects
+** Creates hangup listener
+** TODO [#B] <2017-02-25 Sat> Starts timer
+*** Timer could be like a Scribe -- a daemon which sits independently
+    and does nothing while waiting to send a signal or be refreshed
+*** Alternatively, users could refresh a lease value on activity, and
+    the Timer can periodically check the value to get a new lease
+*** TODO [#B] <2017-02-25 Sat> On timeout, Timer does some action
+*** TODO [#B] <2017-02-25 Sat> On ws receiving bytes, refresh timer
+*** TODO [#A] <2017-02-22 Wed> Decide how/whether to kill unwanted Timer
+*** TODO [#B] <2017-02-22 Wed> Decide whether to model as abstract FSM
+** Starts waiting for hangup signal
+*** If receives hangup signal, closes and cleans up
+** User disconnects
+*** Closes and cleans hangup listener
+*** TODO [#C] <2017-02-22 Wed> Gracefully stops timer
+** Connection hangs up
+*** Cleans up, stops listening for hangup

@@ -1,0 +1,43 @@
+version: "0.0.1-{build}"
+
+platform: x64
+
+branches:
+  only:
+    - master
+
+clone_folder: c:\gopath\src\github.com\synapse-garden\sg-proto
+
+environment:
+  GOPATH: c:\gopath
+  matrix:
+  - GOARCH: amd64
+    GOVERSION: 1.8
+
+install:
+  - set Path=c:\go\bin;%Path%
+  - echo %Path%
+  - appveyor DownloadFile https://storage.googleapis.com/golang/go%GOVERSION%.windows-%GOARCH%.msi
+  - msiexec /i go%GOVERSION%.windows-%GOARCH%.msi /q
+  - go version
+  - go env
+
+build_script:
+  - go test -v ./...
+  - go build -o buildOutput\sg.exe -i .\sg
+
+artifacts:
+  - path: buildOutput/sg.exe
+    name: binary
+
+deploy:
+  release: sg-proto_$(appveyor_build_version)
+  description: 'This is a release of my awesome application.'
+  provider: GitHub
+  auth_token:
+    secure: oYjhFLxu/bzuNM2WwT+1SDzqSabNhBx79dUB9yWR+6kqe3VQVWmkvWIpbxZ/js8Y
+  artifact: binary # This is the name we specified in the artifacts section.
+  draft: false
+  prerelease: true
+  on:
+    branch: master
