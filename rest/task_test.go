@@ -65,7 +65,7 @@ func (s *RESTSuite) TestTaskBind(c *C) {
 	var (
 		r = htr.New()
 
-		now       = time.Now()
+		now       = time.Now().UTC()
 		someWhen  = now.Add(2 * time.Hour)
 		beforeNow = now.Add(-1 * time.Hour)
 

@@ -29,7 +29,7 @@ func (s *TaskSuite) TestTaskLoadErr(c *C) {
 }
 
 func (s *TaskSuite) TestTaskStoreLoad(c *C) {
-	someWhen := time.Now().Add(2 * time.Hour)
+	someWhen := time.Now().Add(2 * time.Hour).UTC()
 	for i, t := range []struct {
 		should string
 
