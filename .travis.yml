@@ -1,9 +1,9 @@
 language: go
 
-go: tip
+go: 1.8.x
 
 script:
-- go test -check.v ./...
+- go test -v ./...
 - go build -o build/sg ./sg
 
 deploy:
