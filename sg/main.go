@@ -5,12 +5,12 @@ import (
 	"flag"
 	"log"
 
-	uuid "github.com/satori/go.uuid"
 	"github.com/synapse-garden/sg-proto/auth"
 	"github.com/synapse-garden/sg-proto/rest"
 	"github.com/synapse-garden/sg-proto/store"
 
 	"github.com/boltdb/bolt"
+	uuid "github.com/satori/go.uuid"
 )
 
 // CLI flags
