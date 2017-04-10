@@ -2,6 +2,7 @@ package river
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/synapse-garden/sg-proto/store"
 
@@ -47,17 +48,22 @@ func NewPub(id, streamID string, tx *bolt.Tx) (r Pub, e error) {
 
 	bID := []byte(id)
 	if k, _ := b.Cursor().Seek(bID); bytes.Equal(k, bID) {
-		return nil, errExists(id)
+		return nil, errExists(fmt.Sprintf(
+			"pub %s/%s", streamID, id,
+		))
 	}
 
 	if err = b.Put(bID, nil); err != nil {
 		return nil, errors.Wrap(err,
 			"failed to write river to DB")
 	}
-	err = sock.Listen("inproc://" + streamID + "/" + id)
+
+	addr := "inproc://" + streamID + "/" + id
+
+	err = sock.Listen(addr)
 	switch {
 	case err == mangos.ErrAddrInUse:
-		return nil, errExists(id)
+		return nil, errExists("pub " + addr)
 	case err != nil:
 		return nil, errors.Wrap(err,
 			"failed to start listening")

@@ -47,7 +47,7 @@ func (s *RiverSuite) TestNewPub(c *C) {
 	c.Assert(s.db.Update(func(tx *bolt.Tx) (e error) {
 		_, e = river.NewPub("p1", "goodbye", tx)
 		return
-	}), ErrorMatches, "river `p1` already exists")
+	}), ErrorMatches, "river `pub goodbye/p1` already exists")
 
 	checkRivers(c, s.db, "goodbye", "p1", "p2")
 
