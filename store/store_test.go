@@ -29,7 +29,7 @@ func (s *StoreSuite) SetUpTest(c *C) {
 }
 
 func (s *StoreSuite) TearDownTest(c *C) {
-	c.Assert(testing.CleanupDB(s.DB), IsNil)
+	c.Assert(testing.Cleanup(s.DB), IsNil)
 	c.Assert(os.Remove(s.tmpDir), IsNil)
 }
 
