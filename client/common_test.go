@@ -34,12 +34,12 @@ var _ = Suite(&ClientSuite{})
 
 var src = rest.SourceInfo{
 	License:    "Affero GPL V3",
-	LicensedTo: "SynapseGarden 2016",
+	LicensedTo: "SynapseGarden 2017",
 	Location:   "https://github.com/synapse-garden/sg-proto",
 }
 
 func (s *ClientSuite) SetUpTest(c *C) {
-	db, tmpDir, err := sgt.TempDB("sg-test")
+	db, tmpDir, err := sgt.TempDB("synapse-test")
 	c.Assert(err, IsNil)
 	key := uuid.NewV4()
 	r, cleanups, err := rest.Bind(db, src, auth.Token(key.Bytes()))

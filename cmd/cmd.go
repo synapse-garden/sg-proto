@@ -34,7 +34,8 @@ const help = `SG Help:
 `
 
 const adminHelp = help + `
-  - admin tickets [n]                -- Create n tickets
+  - admin tickets [n]                -- Create [n or 1] tickets
+  - admin tickets get [n]            -- Get the first [n or 10] tickets
 `
 
 type Command func(*client.Client) error
@@ -460,7 +461,7 @@ func SetAPI(key string) Command {
 		}
 
 		c.APIKey = key
-		return OutputString("API key set")(c)
+		return OutputString("API key verified")(c)
 	}
 }
 
@@ -473,6 +474,10 @@ func AdminCommand(args ...string) Command {
 
 	cmd, opts := args[0], args[1:]
 	switch cmd {
+	// case "profile", "profiles":
+	// 	switch len(opts) {
+	// 	case 0:
+	// 	case
 	case "key", "api-key", "api":
 		if len(opts) != 1 {
 			return OutputHelp(cmd)

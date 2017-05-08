@@ -35,9 +35,9 @@ func main() {
 		}
 	}
 
-	scheme := "https"
-	if !*secure {
-		scheme = "http"
+	scheme := "http"
+	if *secure {
+		scheme = "https"
 	}
 
 	hostURL, err := url.Parse(scheme + "://" + *host + *port)

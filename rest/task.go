@@ -89,7 +89,7 @@ func (t Task) Cleanup() error {
 	})
 }
 
-func (t *Task) GetAll(w http.ResponseWriter, r *http.Request, _ htr.Params) {
+func (t Task) GetAll(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 	vals, err := url.ParseQuery(r.URL.RawQuery)
 	if err != nil {
 		http.Error(w, errors.Wrap(
@@ -158,7 +158,7 @@ func (t *Task) GetAll(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 	json.NewEncoder(w).Encode(ts)
 }
 
-func (t *Task) Create(w http.ResponseWriter, r *http.Request, _ htr.Params) {
+func (t Task) Create(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 	userID := mw.CtxGetUserID(r)
 
 	tsk := new(task.Task)
@@ -245,7 +245,7 @@ func (t *Task) Create(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 	json.NewEncoder(w).Encode(tsk)
 }
 
-func (t *Task) Get(w http.ResponseWriter, r *http.Request, ps htr.Params) {
+func (t Task) Get(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	userID := mw.CtxGetUserID(r)
 	tIDString, err := uuid.FromString(ps.ByName("id"))
 	if err != nil {
@@ -275,7 +275,7 @@ func (t *Task) Get(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	json.NewEncoder(w).Encode(tsk)
 }
 
-func (t *Task) Delete(w http.ResponseWriter, r *http.Request, ps htr.Params) {
+func (t Task) Delete(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	userID := mw.CtxGetUserID(r)
 	tIDString := ps.ByName("id")
 	tUUID, err := uuid.FromString(tIDString)
@@ -324,7 +324,7 @@ func (t *Task) Delete(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	}
 }
 
-func (t *Task) Put(w http.ResponseWriter, r *http.Request, ps htr.Params) {
+func (t Task) Put(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	userID := mw.CtxGetUserID(r)
 	tIDString, err := uuid.FromString(ps.ByName("id"))
 	if err != nil {
