@@ -14,11 +14,9 @@ import (
 	"github.com/synapse-garden/sg-proto/rest"
 	"github.com/synapse-garden/sg-proto/store"
 	"github.com/synapse-garden/sg-proto/stream"
-	"github.com/synapse-garden/sg-proto/stream/river"
 	sgt "github.com/synapse-garden/sg-proto/testing"
 	"github.com/synapse-garden/sg-proto/users"
 
-	"github.com/boltdb/bolt"
 	"github.com/davecgh/go-spew/spew"
 	htr "github.com/julienschmidt/httprouter"
 	uuid "github.com/satori/go.uuid"
@@ -32,7 +30,7 @@ func prepAdminAPI(c *C,
 	r *htr.Router,
 	api *rest.Admin,
 	users ...string,
-) (*htt.Server, map[string]auth.Token) {
+) (*htt.Server, rest.Cleanup, map[string]auth.Token) {
 	tokens := make(map[string]auth.Token)
 
 	for _, user := range users {
@@ -43,39 +41,37 @@ func prepAdminAPI(c *C,
 		tokens[user] = sesh.Token
 	}
 
-	c.Assert(api.Bind(r), IsNil)
-	c.Assert(rest.Token{api.DB}.Bind(r), IsNil)
-	c.Assert(rest.Profile{api.DB}.Bind(r), IsNil)
+	cc, err := api.Bind(r)
+	defer func() {
+		if c.Failed() {
+			cc()
+		}
+	}()
+	c.Assert(err, IsNil)
+	_, err = rest.Token{api.DB}.Bind(r)
+	c.Assert(err, IsNil)
+	_, err = rest.Profile{api.DB}.Bind(r)
+	c.Assert(err, IsNil)
 
 	// Make a testing server to run it.
-	return htt.NewServer(r), tokens
-}
-
-func cleanupAdminAPI(c *C, api *rest.Admin) {
-	c.Assert(api.Pub.Close(), IsNil)
-	c.Assert(api.Update(func(tx *bolt.Tx) error {
-		return river.DeletePub(rest.AdminNotifs, rest.NotifStream, tx)
-	}), IsNil)
+	return htt.NewServer(r), cc, tokens
 }
 
 func (s *RESTSuite) TestAdminNilDB(c *C) {
-	c.Assert(
-		new(rest.Admin).Bind(htr.New()),
-		ErrorMatches,
-		"Admin DB handle must not be nil",
-	)
+	_, err := new(rest.Admin).Bind(nil)
+	c.Assert(err, ErrorMatches, "nil Admin DB handle")
 }
 
 func (s *RESTSuite) TestAdminGetAllProfiles(c *C) {
 	var (
-		tokenUUID = uuid.NewV4()
-		adminKey  = auth.Token(tokenUUID[:])
-		api       = &rest.Admin{Token: adminKey, DB: s.db}
-		r         = htr.New()
-		srv, _    = prepAdminAPI(c, r, api, "bob", "bodie")
+		tokenUUID  = uuid.NewV4()
+		adminKey   = auth.Token(tokenUUID[:])
+		api        = &rest.Admin{Token: adminKey, DB: s.db}
+		r          = htr.New()
+		srv, cc, _ = prepAdminAPI(c, r, api, "bob", "bodie")
 	)
 	defer srv.Close()
-	defer cleanupAdminAPI(c, api)
+	defer cc()
 
 	uu := uuid.NewV4()
 	tok := auth.Token(uu[:])
@@ -119,14 +115,14 @@ func (s *RESTSuite) TestAdminGetAllProfiles(c *C) {
 
 func (s *RESTSuite) TestAdminNewLoginErrors(c *C) {
 	var (
-		tokenUUID   = uuid.NewV4()
-		adminKey    = auth.Token(tokenUUID[:])
-		api         = &rest.Admin{Token: adminKey, DB: s.db}
-		r           = htr.New()
-		srv, tokens = prepAdminAPI(c, r, api, "bob", "bodie")
+		tokenUUID       = uuid.NewV4()
+		adminKey        = auth.Token(tokenUUID[:])
+		api             = &rest.Admin{Token: adminKey, DB: s.db}
+		r               = htr.New()
+		srv, cc, tokens = prepAdminAPI(c, r, api, "bob", "bodie")
 	)
 	defer srv.Close()
-	defer cleanupAdminAPI(c, api)
+	defer cc()
 
 	uu := uuid.NewV4()
 	tok := auth.Token(uu[:])
@@ -203,17 +199,17 @@ func (s *RESTSuite) TestAdminNewLoginErrors(c *C) {
 
 func (s *RESTSuite) TestAdminNewLoginWorks(c *C) {
 	var (
-		tokenUUID = uuid.NewV4()
-		adminKey  = auth.Token(tokenUUID[:])
-		api       = &rest.Admin{Token: adminKey, DB: s.db}
-		r         = htr.New()
-		srv, _    = prepAdminAPI(c, r, api)
+		tokenUUID  = uuid.NewV4()
+		adminKey   = auth.Token(tokenUUID[:])
+		api        = &rest.Admin{Token: adminKey, DB: s.db}
+		r          = htr.New()
+		srv, cc, _ = prepAdminAPI(c, r, api)
 
 		intoUser    = new(users.User)
 		intoSession = new(auth.Session)
 	)
 	defer srv.Close()
-	defer cleanupAdminAPI(c, api)
+	defer cc()
 
 	newLogin := &auth.Login{
 		User:   users.User{Name: "bodo"},
@@ -254,14 +250,16 @@ func (s *RESTSuite) TestAdminNewLoginWorks(c *C) {
 
 func (s *RESTSuite) TestAdminPatchProfile(c *C) {
 	var (
-		tokenUUID   = uuid.NewV4()
-		adminKey    = auth.Token(tokenUUID[:])
-		api         = &rest.Admin{Token: adminKey, DB: s.db}
-		r           = htr.New()
-		srv, tokens = prepAdminAPI(c, r, api, "bob", "bodie")
-		notifErr    = rest.Notif{DB: s.db}.Bind(r)
+		tokenUUID       = uuid.NewV4()
+		adminKey        = auth.Token(tokenUUID[:])
+		api             = &rest.Admin{Token: adminKey, DB: s.db}
+		r               = htr.New()
+		srv, cc, tokens = prepAdminAPI(c, r, api, "bob", "bodie")
+		_, notifErr     = rest.Notif{DB: s.db}.Bind(r)
 	)
 	defer srv.Close()
+	defer cc()
+
 	c.Assert(notifErr, IsNil)
 
 	// Get websocket connection for "bodie".
@@ -281,8 +279,6 @@ func (s *RESTSuite) TestAdminPatchProfile(c *C) {
 	defer func() {
 		c.Assert(connBodie.Close(), IsNil)
 		c.Assert(connBob.Close(), IsNil)
-
-		cleanupAdminAPI(c, api)
 	}()
 
 	uu := uuid.NewV4()
@@ -441,20 +437,95 @@ func (s *RESTSuite) TestAdminPatchProfile(c *C) {
 	}
 }
 
+func (s *RESTSuite) TestAdminGetTickets(c *C) {
+	var (
+		tokenUUID = uuid.NewV4()
+		adminKey  = auth.Token(tokenUUID[:])
+		api       = &rest.Admin{Token: adminKey, DB: s.db}
+		r         = htr.New()
+		cc, err   = api.Bind(r)
+	)
+
+	c.Assert(err, IsNil)
+	defer cc()
+
+	c.Log("GET /admin/tickets returns empty array")
+
+	c.Assert(sgt.ExpectResponse(r,
+		"/admin/tickets", "GET", nil,
+		new([]incept.Ticket), new([]incept.Ticket),
+		200,
+		sgt.Admin(adminKey),
+	), IsNil)
+
+	var (
+		t1     = incept.Ticket(uuid.NewV4())
+		t2     = incept.Ticket(uuid.NewV4())
+		expect = []incept.Ticket{t1, t2}
+	)
+	if t2.String() < t1.String() {
+		expect = []incept.Ticket{t2, t1}
+	}
+
+	c.Assert(s.db.Update(incept.NewTickets(t1, t2)), IsNil)
+
+	for i, test := range []struct {
+		should string
+
+		verb, path       string
+		header           http.Header
+		expectStatus     int
+		into, expectResp interface{}
+
+		expectNotifs  map[*ws.Conn][]*store.ResourceBox
+		expectHeaders []http.Header
+	}{{
+		should: "reject wrong HTTP method",
+		verb:   "DELETE", path: "/admin/tickets",
+		header:       sgt.Admin(adminKey),
+		expectStatus: http.StatusMethodNotAllowed,
+		into:         new(string),
+		expectResp:   "Method Not Allowed\n",
+		expectHeaders: []http.Header{
+			sgt.FailHeader,
+			sgt.Options("GET", "POST", "OPTIONS"),
+		},
+	}, {
+		should: "return expected tickets",
+		verb:   "GET", path: "/admin/tickets",
+		header:       sgt.Admin(adminKey),
+		expectStatus: http.StatusOK,
+		into:         new([]incept.Ticket),
+		expectResp:   &expect,
+	}} {
+		c.Logf("test %d: %s on %s should %s", i,
+			test.verb, test.path,
+			test.should,
+		)
+		c.Assert(sgt.ExpectResponse(r,
+			test.path, test.verb, nil,
+			test.into, test.expectResp,
+			test.expectStatus,
+			test.header,
+			test.expectHeaders...,
+		), IsNil)
+	}
+}
+
 func (s *RESTSuite) TestAdminDeleteUser(c *C) {
 	var (
-		tokenUUID   = uuid.NewV4()
-		adminKey    = auth.Token(tokenUUID[:])
-		api         = &rest.Admin{Token: adminKey, DB: s.db}
-		r           = htr.New()
-		srv, tokens = prepAdminAPI(c, r, api, "bob", "bodie")
-		convoAPI    = &rest.Convo{DB: s.db}
-		convoErr    = convoAPI.Bind(r)
-		notifErr    = rest.Notif{DB: s.db}.Bind(r)
+		tokenUUID       = uuid.NewV4()
+		adminKey        = auth.Token(tokenUUID[:])
+		api             = &rest.Admin{Token: adminKey, DB: s.db}
+		r               = htr.New()
+		srv, cc, tokens = prepAdminAPI(c, r, api, "bob", "bodie")
+		convoAPI        = &rest.Convo{DB: s.db}
+		cc2, convoErr   = convoAPI.Bind(r)
+		_, notifErr     = rest.Notif{DB: s.db}.Bind(r)
 	)
 	defer srv.Close()
-	defer cleanupConvoAPI(c, *convoAPI)
-	defer cleanupAdminAPI(c, api)
+	defer cc()
+	defer cc2()
 
 	c.Assert(convoErr, IsNil)
 	c.Assert(notifErr, IsNil)
@@ -555,7 +626,8 @@ func (s *RESTSuite) TestAdminDeleteUser(c *C) {
 	c.Assert(s.db.Update(incept.NewTickets(tick)), IsNil)
 
 	// Bind the Incept API for testing.
-	c.Assert(rest.Incept{DB: api.DB}.Bind(r), IsNil)
+	_, err = rest.Incept{DB: api.DB}.Bind(r)
+	c.Assert(err, IsNil)
 
 	// bodie's login is disabled; new bodie user cannot be created;
 	// bodie's sessions are cleared.

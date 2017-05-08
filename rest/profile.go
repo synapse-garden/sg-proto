@@ -26,15 +26,15 @@ type Profile struct {
 }
 
 // Bind implements API.Bind on Profile.
-func (p Profile) Bind(r *htr.Router) error {
+func (p Profile) Bind(r *htr.Router) (Cleanup, error) {
 	db := p.DB
 	if db == nil {
-		return errors.New("Profile DB handle must not be nil")
+		return nil, errors.New("nil Profile DB handle")
 	}
 	r.GET("/profile", mw.AuthUser(p.Get, db, mw.CtxSetUserID))
 	r.DELETE("/profile", mw.AuthUser(p.Delete, db, mw.CtxSetUserID))
 
-	return nil
+	return nil, nil
 }
 
 // Get fetches the user's Profile by userID.

@@ -32,9 +32,9 @@ type Task struct {
 	util.Timer
 }
 
-func (t *Task) Bind(r *htr.Router) error {
+func (t *Task) Bind(r *htr.Router) (Cleanup, error) {
 	if t.DB == nil {
-		return errors.New("Bind called with nil DB handle")
+		return nil, errors.New("nil Task DB handle")
 	}
 
 	err := t.Update(func(tx *bolt.Tx) (e error) {
@@ -42,7 +42,7 @@ func (t *Task) Bind(r *htr.Router) error {
 		return
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	r.GET("/tasks", mw.AuthUser(
@@ -75,7 +75,18 @@ func (t *Task) Bind(r *htr.Router) error {
 		mw.CtxSetUserID,
 	))
 
-	return nil
+	return t.Cleanup, nil
+}
+
+// Cleanup closes the Task's Pub river and deletes it from the DB.
+func (t Task) Cleanup() error {
+	if err := t.Pub.Close(); err != nil {
+		return err
+	}
+
+	return t.Update(func(tx *bolt.Tx) error {
+		return river.DeletePub(TaskNotifs, NotifStream, tx)
+	})
 }
 
 func (t *Task) GetAll(w http.ResponseWriter, r *http.Request, _ htr.Params) {

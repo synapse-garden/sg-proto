@@ -1,12 +1,12 @@
 package rest_test
 
 import (
-	// "github.com/synapse-garden/sg-proto/incept"
-	// "github.com/synapse-garden/sg-proto/users"
+	"github.com/synapse-garden/sg-proto/rest"
 
-	// "github.com/boltdb/bolt"
 	. "gopkg.in/check.v1"
 )
+
+var _ = rest.API(rest.Token{})
 
 func (s *RESTSuite) TestToken(c *C) {
 	// If a user's account does not exist, he cannot create a token.

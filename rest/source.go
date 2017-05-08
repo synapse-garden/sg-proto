@@ -19,10 +19,10 @@ type SourceInfo struct {
 }
 
 // Bind implements API.Bind on SourceInfo.
-func (s SourceInfo) Bind(r *htr.Router) error {
+func (s SourceInfo) Bind(r *htr.Router) (Cleanup, error) {
 	bs, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	r.GET("/source", func(
 		w http.ResponseWriter,
@@ -31,5 +31,5 @@ func (s SourceInfo) Bind(r *htr.Router) error {
 	) {
 		w.Write(bs)
 	})
-	return nil
+	return nil, nil
 }

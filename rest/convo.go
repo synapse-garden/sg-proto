@@ -32,10 +32,10 @@ type Convo struct {
 }
 
 // Bind implements API.Bind on Convo.
-func (c *Convo) Bind(r *htr.Router) error {
+func (c *Convo) Bind(r *htr.Router) (Cleanup, error) {
 	db := c.DB
 	if db == nil {
-		return errors.New("Convo DB handle must not be nil")
+		return nil, errors.New("nil Convo DB handle")
 	}
 
 	err := db.Update(func(tx *bolt.Tx) (e error) {
@@ -43,7 +43,7 @@ func (c *Convo) Bind(r *htr.Router) error {
 		return
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	r.GET("/convos/:convo_id/start", mw.AuthWSUser(
@@ -81,7 +81,18 @@ func (c *Convo) Bind(r *htr.Router) error {
 		db, mw.CtxSetUserID,
 	))
 
-	return nil
+	return c.Cleanup, nil
+}
+
+// Cleanup closes the Convo's Pub river and deletes it from the DB.
+func (c Convo) Cleanup() error {
+	if err := c.Pub.Close(); err != nil {
+		return err
+	}
+
+	return c.Update(func(tx *bolt.Tx) error {
+		return river.DeletePub(ConvoNotifs, NotifStream, tx)
+	})
 }
 
 // Connect is a Handle which opens and binds a WebSocket session to a

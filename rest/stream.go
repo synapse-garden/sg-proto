@@ -32,10 +32,10 @@ type Stream struct {
 }
 
 // Bind implements API.Bind on Stream.
-func (s *Stream) Bind(r *htr.Router) error {
+func (s *Stream) Bind(r *htr.Router) (Cleanup, error) {
 	db := s.DB
 	if db == nil {
-		return errors.New("Stream DB handle must not be nil")
+		return nil, errors.New("nil Stream DB handle")
 	}
 
 	err := db.Update(func(tx *bolt.Tx) (e error) {
@@ -43,7 +43,7 @@ func (s *Stream) Bind(r *htr.Router) error {
 		return
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// vx.y.0:
@@ -110,7 +110,18 @@ func (s *Stream) Bind(r *htr.Router) error {
 		db, mw.CtxSetUserID,
 	))
 
-	return nil
+	return s.Cleanup, nil
+}
+
+// Cleanup closes the Stream's notification Pub river.
+func (s Stream) Cleanup() error {
+	if err := s.Pub.Close(); err != nil {
+		return err
+	}
+
+	return s.Update(func(tx *bolt.Tx) error {
+		return river.DeletePub(StreamNotifs, NotifStream, tx)
+	})
 }
 
 // Connect is a Handle which opens and binds a WebSocket session to a

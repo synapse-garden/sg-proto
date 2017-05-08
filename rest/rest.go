@@ -14,6 +14,7 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/julienschmidt/httprouter"
+	"github.com/pkg/errors"
 )
 
 // Needed endpoints:
@@ -43,9 +44,31 @@ import (
 //  - POST /todo/:id/complete => Get bounty if before due
 
 // API is a transform on an httprouter.Router, passing a DB for passing
-// on to httprouter.Handles.
+// on to httprouter.Handles.  If a non-nil Cleanup is returned, it
+// may be called to deallocate any resources the API acquired during
+// Bind.
 type API interface {
-	Bind(*httprouter.Router) error
+	Bind(*httprouter.Router) (Cleanup, error)
+}
+
+// Cleanup is a deferred cleanup function meant to deallocate any
+// resources which an API acquires, such as sockets addresses.  It may
+// optionally be returned by API.Bind.
+type Cleanup func() error
+
+// Cleanups gathers a slice of Cleanup in order to simplify cleanup.
+type Cleanups []Cleanup
+
+// Cleanup runs Cleanup on each Cleanup in the Cleanups.  It returns the
+// first error encountered and stops.
+func (c Cleanups) Cleanup() error {
+	for i, cc := range c {
+		if err := cc(); err != nil {
+			return errors.Wrapf(err, "cleanup %d failed", i)
+		}
+	}
+
+	return nil
 }
 
 // Bind binds the API on the given DB.  It sets up REST endpoints as needed.
@@ -53,7 +76,7 @@ func Bind(
 	db *bolt.DB,
 	source SourceInfo,
 	apiKey auth.Token,
-) (*httprouter.Router, error) {
+) (*httprouter.Router, Cleanups, error) {
 	if err := db.Update(store.Wrap(
 		store.Prep(
 			admin.AdminBucket,
@@ -73,8 +96,10 @@ func Bind(
 		auth.ClearSessions,
 		river.ClearRivers,
 	)); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+
+	var cleanups []Cleanup
 
 	htr := httprouter.New()
 	for _, api := range []API{
@@ -91,10 +116,14 @@ func Bind(
 		// Connect Notif last so Pubs are already registered.
 		Notif{DB: db},
 	} {
-		if err := api.Bind(htr); err != nil {
-			return nil, err
+		c, err := api.Bind(htr)
+		switch {
+		case err != nil:
+			return nil, cleanups, err
+		case c != nil:
+			cleanups = append(cleanups, c)
 		}
 	}
 
-	return htr, nil
+	return htr, cleanups, nil
 }

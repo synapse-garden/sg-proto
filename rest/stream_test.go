@@ -20,6 +20,8 @@ import (
 	. "gopkg.in/check.v1"
 )
 
+var _ = rest.API(new(rest.Stream))
+
 func (s *RESTSuite) TestStream(c *C) {
 	user1, err := sgt.MakeLogin("bodie", "hello", s.db)
 	c.Assert(err, IsNil)
@@ -35,11 +37,13 @@ func (s *RESTSuite) TestStream(c *C) {
 
 	r := httprouter.New()
 	api := &rest.Stream{DB: s.db}
-	c.Assert(api.Bind(r), IsNil)
+	cc, err := api.Bind(r)
+	c.Assert(err, IsNil)
+	defer cc()
+
 	// Make a testing server to run it.
 	srv := htt.NewServer(r)
 	defer srv.Close()
-	defer c.Assert(api.Pub.Close(), IsNil)
 
 	id := uuid.NewV4()
 

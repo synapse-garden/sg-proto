@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/synapse-garden/sg-proto/rest"
 	"github.com/synapse-garden/sg-proto/store"
 
 	"github.com/boltdb/bolt"
@@ -29,14 +30,22 @@ func TempDB(name string) (*bolt.DB, string, error) {
 	return db, d, nil
 }
 
-func CleanupDB(db *bolt.DB) error {
+func Cleanup(db *bolt.DB, ccs ...rest.Cleanup) error {
+	if err := rest.Cleanups(ccs).Cleanup(); err != nil {
+		return errors.Wrap(err, "failed to clean up APIs")
+	}
+
 	path := db.Path()
 	if err := db.Close(); err != nil {
-		return err
+		return errors.Wrap(err, "failed to close DB")
 	}
+
 	if err := os.Remove(path); err != nil {
-		return err
+		return errors.Wrapf(err,
+			"failed to remove DB file %s", path,
+		)
 	}
+
 	return nil
 }
 

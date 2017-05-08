@@ -20,6 +20,8 @@ import (
 	. "gopkg.in/check.v1"
 )
 
+var _ = rest.API(rest.Incept{})
+
 func (s *RESTSuite) TestIncept(c *C) {
 	correctURL := "/incept/"
 
@@ -144,7 +146,8 @@ func (s *RESTSuite) TestIncept(c *C) {
 		c.Logf("  Body: %#q", test.body)
 
 		r := httprouter.New()
-		c.Assert(rest.Incept{DB: s.db}.Bind(r), IsNil)
+		_, err := rest.Incept{DB: s.db}.Bind(r)
+		c.Assert(err, IsNil)
 		rdr := bytes.NewBufferString(test.body)
 		req := htt.NewRequest(test.method, test.url, rdr)
 		w := htt.NewRecorder()

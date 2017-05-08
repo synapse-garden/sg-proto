@@ -36,25 +36,17 @@ type Admin struct {
 }
 
 // Bind implements API.Bind on Admin.
-func (a *Admin) Bind(r *htr.Router) error {
+func (a *Admin) Bind(r *htr.Router) (Cleanup, error) {
 	db := a.DB
 	if db == nil {
-		return errors.New("Admin DB handle must not be nil")
-	}
-
-	err := db.Update(func(tx *bolt.Tx) (e error) {
-		a.Pub, e = river.NewPub(AdminNotifs, NotifStream, tx)
-		return
-	})
-	if err != nil {
-		return err
+		return nil, errors.New("nil Admin DB handle")
 	}
 
 	if a.Token != nil {
 		// User wants to create a new token.
 		err := db.Update(admin.NewToken(a.Token))
 		if err != nil {
-			return err
+			return nil, err
 		}
 	} else if err := db.View(admin.CheckExists); err != nil {
 		switch err.(type) {
@@ -64,11 +56,19 @@ func (a *Admin) Bind(r *htr.Router) error {
 				base64.StdEncoding.EncodeToString(newToken))
 			err = db.Update(admin.NewToken(newToken))
 			if err != nil {
-				return err
+				return nil, err
 			}
 		default:
-			return errors.Wrap(err, "failed to check for existing admin key")
+			return nil, errors.Wrap(err, "failed to check for existing admin key")
 		}
+	}
+
+	err := db.Update(func(tx *bolt.Tx) (e error) {
+		a.Pub, e = river.NewPub(AdminNotifs, NotifStream, tx)
+		return
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	r.GET("/admin/verify", mw.AuthAdmin(a.Verify, db))
@@ -81,7 +81,17 @@ func (a *Admin) Bind(r *htr.Router) error {
 	r.DELETE("/admin/tickets/:ticket", mw.AuthAdmin(a.DeleteTicket, db))
 	r.DELETE("/admin/users/:user_id", mw.AuthAdmin(a.DeleteUser, db))
 
-	return nil
+	return a.Cleanup, nil
+}
+
+// Cleanup closes the Admin's Pub river and deletes it from the DB.
+func (a Admin) Cleanup() error {
+	if err := a.Pub.Close(); err != nil {
+		return err
+	}
+	return a.Update(func(tx *bolt.Tx) error {
+		return river.DeletePub(AdminNotifs, NotifStream, tx)
+	})
 }
 
 func (Admin) Verify(w http.ResponseWriter, r *http.Request, _ htr.Params) {

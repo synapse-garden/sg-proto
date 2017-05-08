@@ -68,7 +68,8 @@ func (s *RESTSuite) TestConnectNotifs(c *C) {
 	}), IsNil)
 
 	r := httprouter.New()
-	c.Assert(rest.Notif{DB: s.db}.Bind(r), IsNil)
+	_, err := rest.Notif{DB: s.db}.Bind(r)
+	c.Assert(err, IsNil)
 	// Make a testing server to run it.
 	srv := httptest.NewServer(r)
 	defer srv.Close()

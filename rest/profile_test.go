@@ -23,11 +23,13 @@ import (
 	. "gopkg.in/check.v1"
 )
 
+var _ = rest.API(rest.Profile{})
+
 func prepProfileAPI(c *C,
 	r *htr.Router,
 	api rest.Profile,
 	users ...string,
-) (*htt.Server, *rest.Convo, map[string]auth.Token) {
+) (*htt.Server, rest.Cleanup, *rest.Convo, map[string]auth.Token) {
 	tokens := make(map[string]auth.Token)
 
 	for _, user := range users {
@@ -38,32 +40,40 @@ func prepProfileAPI(c *C,
 		tokens[user] = sesh.Token
 	}
 
-	conv := &rest.Convo{DB: api.DB}
+	_, err := rest.Token{DB: api.DB}.Bind(r)
+	c.Assert(err, IsNil)
 
-	c.Assert(rest.Token{DB: api.DB}.Bind(r), IsNil)
-	c.Assert(conv.Bind(r), IsNil)
-	c.Assert(rest.Incept{DB: api.DB}.Bind(r), IsNil)
-	c.Assert(api.Bind(r), IsNil)
+	_, err = rest.Incept{DB: api.DB}.Bind(r)
+	c.Assert(err, IsNil)
+
+	_, err = api.Bind(r)
+	c.Assert(err, IsNil)
+
+	conv := &rest.Convo{DB: api.DB}
+	cc, err := conv.Bind(r)
+	c.Assert(err, IsNil)
 
 	// Make a testing server to run it.
-	return htt.NewServer(r), conv, tokens
+	return htt.NewServer(r), cc, conv, tokens
 
 }
 
 func (s *RESTSuite) TestProfileBind(c *C) {
+	_, err := rest.Profile{}.Bind(nil)
+	c.Check(err, ErrorMatches, "nil Profile DB handle")
 	r := htr.New()
-	c.Check(rest.Profile{}.Bind(r), ErrorMatches, ".*not be nil")
-	c.Check(rest.Profile{DB: s.db}.Bind(r), IsNil)
+	_, err = rest.Profile{DB: s.db}.Bind(r)
+	c.Check(err, IsNil)
 }
 
 func (s *RESTSuite) TestProfileGet(c *C) {
 	var (
-		api               = rest.Profile{DB: s.db}
-		r                 = htr.New()
-		srv, conv, tokens = prepProfileAPI(c, r, api, "bob", "bodie")
+		api                = rest.Profile{DB: s.db}
+		r                  = htr.New()
+		srv, cc, _, tokens = prepProfileAPI(c, r, api, "bob", "bodie")
 	)
 	defer srv.Close()
-	defer cleanupConvoAPI(c, *conv)
+	defer cc()
 
 	uu := uuid.NewV4()
 	someToken := auth.Token(uu[:])
@@ -116,12 +126,12 @@ func (s *RESTSuite) TestProfileDelete(c *C) {
 	// This test is supposed to show that after a user's profile is
 	// deleted, that user's tokens are removed, and login disabled.
 	var (
-		api               = rest.Profile{DB: s.db}
-		r                 = htr.New()
-		srv, conv, tokens = prepProfileAPI(c, r, api, "bob", "bodie")
+		api                = rest.Profile{DB: s.db}
+		r                  = htr.New()
+		srv, cc, _, tokens = prepProfileAPI(c, r, api, "bob", "bodie")
 	)
 	defer srv.Close()
-	defer cleanupConvoAPI(c, *conv)
+	defer cc()
 
 	uu := uuid.NewV4()
 	someToken := auth.Token(uu[:])
@@ -205,15 +215,17 @@ func (s *RESTSuite) TestProfileDeleteHangups(c *C) {
 	// This test is supposed to create a convo, connect to it, and
 	// show that when the profile is deleted, the user is hung up.
 	var (
-		api               = rest.Profile{DB: s.db}
-		r                 = htr.New()
-		srv, conv, tokens = prepProfileAPI(c, r, api, "bob", "bodie")
+		api                = rest.Profile{DB: s.db}
+		r                  = htr.New()
+		srv, cc, _, tokens = prepProfileAPI(c, r, api, "bob", "bodie")
+		notifs             = rest.Notif{DB: s.db}
+		_, err             = notifs.Bind(r)
 	)
-	defer srv.Close()
-	defer cleanupConvoAPI(c, *conv)
 
-	notifs := rest.Notif{DB: s.db}
-	c.Assert(notifs.Bind(r), IsNil)
+	defer srv.Close()
+	defer cc()
+
+	c.Assert(err, IsNil)
 
 	toPOST := &convo.Convo{Group: users.Group{
 		Owner:   "bodie",
@@ -293,10 +305,10 @@ func (s *RESTSuite) TestProfileDeleteHangups(c *C) {
 
 func (s *RESTSuite) TestProfileOptions(c *C) {
 	var (
-		api = rest.Profile{DB: s.db}
-		r   = htr.New()
-		err = api.Bind(r)
-		srv = htt.NewServer(r)
+		api    = rest.Profile{DB: s.db}
+		r      = htr.New()
+		_, err = api.Bind(r)
+		srv    = htt.NewServer(r)
 	)
 
 	defer srv.Close()
