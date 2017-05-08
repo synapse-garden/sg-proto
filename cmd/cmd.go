@@ -423,6 +423,18 @@ func GetCommand(args ...string) Command {
 	}
 }
 
+// GetTickets creates n new tickets using the given Admin key.
+func GetTickets(n int) Command {
+	return func(c *client.Client) error {
+		tkts := new([]incept.Ticket)
+		if err := c.GetTickets(tkts, n); err != nil {
+			return OutputErrorf(err, "failed to get %d ticket(s)", n)(c)
+		}
+
+		return OutputJSON("got tickets:\n", tkts)(c)
+	}
+}
+
 // Tickets creates n new tickets using the given Admin key.
 func Tickets(n int) Command {
 	return func(c *client.Client) error {
@@ -471,6 +483,10 @@ func AdminCommand(args ...string) Command {
 		case 0:
 			return Tickets(1)
 		case 1:
+			if opts[0] == "get" {
+				return GetTickets(10)
+			}
+
 			n, err := strconv.Atoi(opts[0])
 			switch {
 			case err != nil:
@@ -483,8 +499,27 @@ func AdminCommand(args ...string) Command {
 
 			}
 			return Tickets(n)
+
+		case 2:
+			if opts[0] != "get" {
+				return OutputHelp(cmd)
+			}
+
+			n, err := strconv.Atoi(opts[1])
+			switch {
+			case err != nil:
+				return OutputStringf(
+					"must provide integer 'n': %s",
+					err.Error(),
+				)
+			case n < 1:
+				return OutputStringf("must provide positive 'n'")
+
+			}
+			return GetTickets(n)
 		}
 		fallthrough
+
 	default:
 		return OutputHelp(cmd)
 	}

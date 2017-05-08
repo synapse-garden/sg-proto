@@ -3,6 +3,7 @@ package incept
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 
 	"github.com/synapse-garden/sg-proto/auth"
 	"github.com/synapse-garden/sg-proto/store"
@@ -56,6 +57,30 @@ func NewTickets(ts ...Ticket) func(*bolt.Tx) error {
 
 func NewTicket(t Ticket) func(*bolt.Tx) error {
 	return store.Put(TicketBucket, t.Bytes(), nil)
+}
+
+func GetTickets(n int) func(*bolt.Tx) ([]Ticket, error) {
+	return func(tx *bolt.Tx) (tkts []Ticket, e error) {
+		e = store.ForEach(TicketBucket, func(k, _ []byte) error {
+			if len(tkts) >= n {
+				return io.EOF
+			}
+
+			uu, err := uuid.FromBytes(k)
+			if err != nil {
+				return err
+			}
+
+			tkts = append(tkts, Ticket(uu))
+			return nil
+		})(tx)
+
+		if e == io.EOF {
+			e = nil
+		}
+
+		return
+	}
 }
 
 func CheckTicketExist(key Ticket) func(*bolt.Tx) error {

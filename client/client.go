@@ -30,6 +30,19 @@ func (c *Client) Info(i *rest.SourceInfo) error {
 	return DecodeGet(i, c.Backend.String()+"/source")
 }
 
+// GetTickets returns GET /admin/tickets?count=n
+func (c *Client) GetTickets(into *[]incept.Ticket, n int) error {
+	if c.APIKey == "" {
+		return errors.New("client must have a valid admin API key")
+	}
+
+	str := c.Backend.String() + "/admin/tickets"
+	if n > 1 {
+		str = fmt.Sprintf("%s?count=%d", str, n)
+	}
+	return DecodeGet(into, str, AdminHeader(c.APIKey))
+}
+
 // CreateTickets creates incept tickets using the given API key.
 func (c *Client) CreateTickets(into *[]incept.Ticket, n int) error {
 	if c.APIKey == "" {

@@ -26,9 +26,8 @@ import (
 func Test(t *testing.T) { TestingT(t) }
 
 type RESTSuite struct {
-	db      *bolt.DB
-	tmpDir  string
-	tickets []incept.Ticket
+	db     *bolt.DB
+	tmpDir string
 }
 
 var _ = Suite(new(RESTSuite))
@@ -58,14 +57,16 @@ func (s *RESTSuite) SetUpTest(c *C) {
 		river.ClearRivers,
 	)), IsNil)
 	s.db, s.tmpDir = db, tmpDir
+}
 
+func prepareTickets(c *C, db *bolt.DB) []incept.Ticket {
 	tkts := make([]incept.Ticket, 3)
 	for i := range tkts {
 		tkts[i] = incept.Ticket(uuid.NewV4())
 	}
-	c.Assert(s.db.Update(incept.NewTickets(tkts...)), IsNil)
+	c.Assert(db.Update(incept.NewTickets(tkts...)), IsNil)
 
-	s.tickets = tkts
+	return tkts
 }
 
 func (s *RESTSuite) TearDownTest(c *C) {

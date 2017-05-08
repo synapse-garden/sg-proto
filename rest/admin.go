@@ -72,6 +72,7 @@ func (a *Admin) Bind(r *htr.Router) (Cleanup, error) {
 	}
 
 	r.GET("/admin/verify", mw.AuthAdmin(a.Verify, db))
+	r.GET("/admin/tickets", mw.AuthAdmin(a.GetTickets, db))
 	r.POST("/admin/tickets", mw.AuthAdmin(a.NewTicket, db))
 	r.GET("/admin/profiles", mw.AuthAdmin(a.GetAllProfiles, db))
 	// PATCH /admin/profiles/bodie?addCoin=1000 (or -1000)
@@ -97,6 +98,48 @@ func (a Admin) Cleanup() error {
 func (Admin) Verify(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 	if err := json.NewEncoder(w).Encode(true); err != nil {
 		http.Error(w, "failed to write response", http.StatusInternalServerError)
+	}
+}
+
+func (a Admin) GetTickets(w http.ResponseWriter, r *http.Request, ps htr.Params) {
+	var (
+		countStr = r.FormValue("count")
+		count    = 20
+		err      error
+	)
+
+	if len(countStr) != 0 {
+		count, err = strconv.Atoi(countStr)
+		switch {
+		case err != nil:
+			http.Error(w, errors.Wrapf(err, fmt.Sprintf(
+				`invalid "count" value %#q`, countStr,
+			)).Error(), http.StatusBadRequest)
+			return
+		case count < 1:
+			http.Error(w, `invalid "count" value < 1`, http.StatusBadRequest)
+			return
+		}
+	}
+
+	var tkts []incept.Ticket
+	err = a.View(func(tx *bolt.Tx) (e error) {
+		tkts, e = incept.GetTickets(count)(tx)
+		return
+	})
+
+	if err != nil {
+		http.Error(w, errors.Wrap(
+			err, "failed to get tickets",
+		).Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(tkts); err != nil {
+		http.Error(w, errors.Wrap(
+			err, "failed to write response",
+		).Error(), http.StatusInternalServerError)
+		return
 	}
 }
 

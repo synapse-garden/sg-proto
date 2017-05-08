@@ -37,8 +37,10 @@ func (s *RESTSuite) TestIncept(c *C) {
 	c.Assert(err, IsNil)
 	correctBody := string(correctBodyBs)
 
-	tkts := make([]string, len(s.tickets))
-	for i, t := range s.tickets {
+	ts := prepareTickets(c, s.db)
+
+	tkts := make([]string, len(ts))
+	for i, t := range ts {
 		tkts[i] = t.String()
 	}
 	c.Logf("correct tickets:\n  %+v", strings.Join(tkts, "\n  "))

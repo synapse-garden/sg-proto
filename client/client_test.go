@@ -16,16 +16,16 @@ import (
 func (s *ClientSuite) TestInfo(c *C) {
 	info := new(rest.SourceInfo)
 	c.Assert(s.cli.Info(info), IsNil)
-	c.Check(info, DeepEquals, src)
+	c.Check(info, DeepEquals, &src)
 }
 
 func (s *ClientSuite) TestCreateTickets(c *C) {
 	ak := s.cli.APIKey
 	s.cli.APIKey = ""
 
-	var ts []incept.Ticket
+	ts := make([]incept.Ticket, 0)
 	c.Check(s.cli.CreateTickets(&ts, 5), ErrorMatches, `client must have a valid admin API key`)
-	c.Check(ts, IsNil)
+	c.Check(ts, DeepEquals, []incept.Ticket{})
 
 	s.cli.APIKey = ak
 	c.Assert(s.cli.CreateTickets(&ts, 5), IsNil)
