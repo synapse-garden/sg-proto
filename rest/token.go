@@ -18,14 +18,14 @@ import (
 type Token struct{ *bolt.DB }
 
 // Bind implements API.Bind on Token.
-func (t Token) Bind(r *htr.Router) error {
+func (t Token) Bind(r *htr.Router) (Cleanup, error) {
 	if t.DB == nil {
-		return errors.New("Token DB handle must not be nil")
+		return nil, errors.New("nil Token DB handle")
 	}
 	r.POST("/tokens", t.Create)
 	r.DELETE("/tokens", mw.AuthUser(t.Delete, t.DB, mw.CtxSetToken))
 
-	return nil
+	return nil, nil
 }
 
 func (t Token) Create(w http.ResponseWriter, r *http.Request, _ htr.Params) {

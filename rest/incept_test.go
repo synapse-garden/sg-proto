@@ -20,6 +20,8 @@ import (
 	. "gopkg.in/check.v1"
 )
 
+var _ = rest.API(rest.Incept{})
+
 func (s *RESTSuite) TestIncept(c *C) {
 	correctURL := "/incept/"
 
@@ -35,8 +37,10 @@ func (s *RESTSuite) TestIncept(c *C) {
 	c.Assert(err, IsNil)
 	correctBody := string(correctBodyBs)
 
-	tkts := make([]string, len(s.tickets))
-	for i, t := range s.tickets {
+	ts := prepareTickets(c, s.db)
+
+	tkts := make([]string, len(ts))
+	for i, t := range ts {
 		tkts[i] = t.String()
 	}
 	c.Logf("correct tickets:\n  %+v", strings.Join(tkts, "\n  "))
@@ -144,7 +148,8 @@ func (s *RESTSuite) TestIncept(c *C) {
 		c.Logf("  Body: %#q", test.body)
 
 		r := httprouter.New()
-		c.Assert(rest.Incept{DB: s.db}.Bind(r), IsNil)
+		_, err := rest.Incept{DB: s.db}.Bind(r)
+		c.Assert(err, IsNil)
 		rdr := bytes.NewBufferString(test.body)
 		req := htt.NewRequest(test.method, test.url, rdr)
 		w := htt.NewRecorder()

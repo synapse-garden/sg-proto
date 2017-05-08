@@ -196,7 +196,7 @@ func (s *RiverSuite) TestCheckRiverNotExists(c *C) {
 	defer func() { c.Assert(r.Close(), IsNil) }()
 
 	err = s.db.View(river.CheckRiverNotExists("hello", "goodbye"))
-	c.Check(err, DeepEquals, river.MakeRiverExistsErr("hello"))
+	c.Check(err, DeepEquals, river.MakeRiverExistsErr("goodbye/hello"))
 }
 
 func (s *RiverSuite) TestClearRivers(c *C) {

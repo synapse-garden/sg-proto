@@ -16,7 +16,8 @@ func serveInsecure(
 	addr, port string,
 	source rest.SourceInfo,
 ) {
-	router, err := rest.Bind(db, source, apiKey)
+	router, cleanups, err := rest.Bind(db, source, apiKey)
+	defer cleanups.Cleanup()
 	if err != nil {
 		log.Fatalf("failed to bind on DB: %s", err.Error())
 	}
@@ -31,7 +32,8 @@ func serveSecure(
 	addr, port, cert, key string,
 	source rest.SourceInfo,
 ) {
-	router, err := rest.Bind(db, source, apiKey)
+	router, cleanups, err := rest.Bind(db, source, apiKey)
+	defer cleanups.Cleanup()
 	if err != nil {
 		log.Fatalf("failed to bind on DB: %s", err.Error())
 	}
@@ -50,7 +52,8 @@ func devServeInsecure(
 	addr, port string,
 	source rest.SourceInfo,
 ) {
-	router, err := rest.Bind(db, source, apiKey)
+	router, cleanups, err := rest.Bind(db, source, apiKey)
+	defer cleanups.Cleanup()
 	if err != nil {
 		log.Fatalf("failed to bind on DB: %s", err.Error())
 	}
@@ -66,7 +69,8 @@ func devServeSecure(
 	addr, port, cert, key string,
 	source rest.SourceInfo,
 ) {
-	router, err := rest.Bind(db, source, apiKey)
+	router, cleanups, err := rest.Bind(db, source, apiKey)
+	defer cleanups.Cleanup()
 	if err != nil {
 		log.Fatalf("failed to bind on DB: %s", err.Error())
 	}

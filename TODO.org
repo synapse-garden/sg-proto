@@ -91,9 +91,7 @@ SG-Proto Orgfile
 
 ** Unorganized
 *** Organize TODOs
-
 *** Cloud (self?) deploy service
-
 *** Better testing of REST resource security.
 *** More auth.Login tests
 *** Ledger?
@@ -122,7 +120,6 @@ SG-Proto Orgfile
 *** Bad usernames cannot be looked up for expired Sessions
 **** This is just a reverse lookup.
 **** Can't find example of why this is a bug.
-*** If database is closed, can't clean up rivers
 *** No auth timeout / river / notifs closure
 *** User set type
 *** Think about true vs false users in groups -- use slice in API?
@@ -213,7 +210,8 @@ SG-Proto Orgfile
 *** Thoroughly test ws package
 *** client package uses custom HTTP client instead of global
 
-* v0.0.2
+
+* v0.0.3
 ** TODO More auth.Login tests
 ** TODO Test HandleDeleteToken (URL encoding, etc.)
 ** TODO Don't check whether token is valid in REST since this is in mw.
@@ -248,6 +246,16 @@ SG-Proto Orgfile
 ** TODO Migration tests
 ** TODO Don't deliver AppVeyor binary unless the branch is merged
 ** TODO Figure out travisCI build artifacts / releases
+** TODO Update changelog v0.0.1
+** TODO Update CONTRIBUTING.md etc
+
+* v0.0.2
+** DONE Add GET /admin/tickets?count=<n>
+   CLOSED: [2017-04-10 Mon 08:39]
+** DONE Make stream/river errExists clearer
+   CLOSED: [2017-04-10 Mon 08:30]
+** DONE If database is closed, can't clean up rivers
+   CLOSED: [2017-05-08 Mon 14:58]
 
 * v0.0.1
 ** DONE Bugs
@@ -620,4 +628,5 @@ SG-Proto Orgfile
     CLOSED: [2017-03-16 Thu 09:59]
 *** DONE Unit tests
     CLOSED: [2017-03-16 Thu 09:59]
-** TODO Deploy
+** DONE Deploy
+   CLOSED: [2017-04-30 Sun 12:16]

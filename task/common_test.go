@@ -39,6 +39,6 @@ func (s *TaskSuite) SetUpTest(c *C) {
 }
 
 func (s *TaskSuite) TearDownTest(c *C) {
-	c.Assert(sgt.CleanupDB(s.DB), IsNil)
+	c.Assert(sgt.Cleanup(s.DB), IsNil)
 	c.Assert(os.Remove(s.tmpDir), IsNil)
 }

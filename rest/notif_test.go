@@ -37,8 +37,11 @@ func (s *RESTSuite) TestConnectNotifs(c *C) {
 		User:   users.User{Name: "bob"},
 		PWHash: []byte("12345"),
 	}
-	c.Assert(incept.Incept(s.tickets[0], user1, s.db), IsNil)
-	c.Assert(incept.Incept(s.tickets[1], user2, s.db), IsNil)
+
+	tkts := prepareTickets(c, s.db)
+
+	c.Assert(incept.Incept(tkts[0], user1, s.db), IsNil)
+	c.Assert(incept.Incept(tkts[1], user2, s.db), IsNil)
 
 	// Get a session token for each.
 	sesh1, sesh2 := new(auth.Session), new(auth.Session)
@@ -68,7 +71,8 @@ func (s *RESTSuite) TestConnectNotifs(c *C) {
 	}), IsNil)
 
 	r := httprouter.New()
-	c.Assert(rest.Notif{DB: s.db}.Bind(r), IsNil)
+	_, err := rest.Notif{DB: s.db}.Bind(r)
+	c.Assert(err, IsNil)
 	// Make a testing server to run it.
 	srv := httptest.NewServer(r)
 	defer srv.Close()

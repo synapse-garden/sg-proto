@@ -12,12 +12,10 @@ import (
 	"github.com/synapse-garden/sg-proto/auth"
 	"github.com/synapse-garden/sg-proto/rest"
 	"github.com/synapse-garden/sg-proto/store"
-	"github.com/synapse-garden/sg-proto/stream/river"
 	"github.com/synapse-garden/sg-proto/task"
 	sgt "github.com/synapse-garden/sg-proto/testing"
 	"github.com/synapse-garden/sg-proto/users"
 
-	"github.com/boltdb/bolt"
 	"github.com/davecgh/go-spew/spew"
 	htr "github.com/julienschmidt/httprouter"
 	uuid "github.com/satori/go.uuid"
@@ -31,7 +29,7 @@ func prepTaskAPI(c *C,
 	r *htr.Router,
 	api *rest.Task,
 	names ...string,
-) (*htt.Server, map[string]auth.Token) {
+) (*htt.Server, rest.Cleanup, map[string]auth.Token) {
 	tokens := make(map[string]auth.Token)
 
 	for _, user := range names {
@@ -42,25 +40,16 @@ func prepTaskAPI(c *C,
 		tokens[user] = sesh.Token
 	}
 
-	c.Assert(api.Bind(r), IsNil)
+	cc, err := api.Bind(r)
+	c.Assert(err, IsNil)
 
 	// Make a testing server to run it.
-	return htt.NewServer(r), tokens
-}
-
-func cleanupTaskAPI(c *C, api *rest.Task) {
-	c.Assert(api.Pub.Close(), IsNil)
-	c.Assert(api.Update(func(tx *bolt.Tx) error {
-		return river.DeletePub(rest.TaskNotifs, rest.NotifStream, tx)
-	}), IsNil)
+	return htt.NewServer(r), cc, tokens
 }
 
 func (s *RESTSuite) TestTaskBind(c *C) {
-	c.Assert(
-		new(rest.Task).Bind(htr.New()),
-		ErrorMatches,
-		"Bind called with nil DB handle",
-	)
+	_, err := new(rest.Task).Bind(nil)
+	c.Assert(err, ErrorMatches, "nil Task DB handle")
 
 	var (
 		r = htr.New()
@@ -69,13 +58,14 @@ func (s *RESTSuite) TestTaskBind(c *C) {
 		someWhen  = now.Add(2 * time.Hour)
 		beforeNow = now.Add(-1 * time.Hour)
 
-		notifErr = rest.Notif{DB: s.db}.Bind(r)
-		api      = &rest.Task{DB: s.db, Timer: sgt.Timer(now)}
+		_, notifErr = rest.Notif{DB: s.db}.Bind(r)
+		api         = &rest.Task{DB: s.db, Timer: sgt.Timer(now)}
 
-		srv, tokens = prepTaskAPI(c, r, api, "bodie", "bob")
+		srv, cc, tokens = prepTaskAPI(c, r, api, "bodie", "bob")
 	)
 
 	defer srv.Close()
+	defer cc()
 	c.Assert(notifErr, IsNil)
 
 	// Get websocket connection for "bodie".
@@ -963,6 +953,4 @@ func (s *RESTSuite) TestTaskBind(c *C) {
 
 	c.Assert(connBodie.Close(), IsNil)
 	c.Assert(connBob.Close(), IsNil)
-
-	cleanupTaskAPI(c, api)
 }

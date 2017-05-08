@@ -27,13 +27,13 @@ type Notif struct {
 }
 
 // Bind implements API.Bind on Notif.
-func (n Notif) Bind(r *htr.Router) error {
+func (n Notif) Bind(r *htr.Router) (Cleanup, error) {
 	if n.DB == nil {
-		return errors.New("Notif DB handle must not be nil")
+		return nil, errors.New("nil Notif DB handle")
 	}
 	// When a client wants to connect to notifs, use stream.NewSub.
 	r.GET("/notifs", mw.AuthWSUser(n.Connect, n.DB, mw.CtxSetUserID))
-	return nil
+	return nil, nil
 }
 
 // Connect binds a subscriber River and serves it over a Websocket.

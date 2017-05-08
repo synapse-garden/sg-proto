@@ -32,9 +32,9 @@ type Task struct {
 	util.Timer
 }
 
-func (t *Task) Bind(r *htr.Router) error {
+func (t *Task) Bind(r *htr.Router) (Cleanup, error) {
 	if t.DB == nil {
-		return errors.New("Bind called with nil DB handle")
+		return nil, errors.New("nil Task DB handle")
 	}
 
 	err := t.Update(func(tx *bolt.Tx) (e error) {
@@ -42,7 +42,7 @@ func (t *Task) Bind(r *htr.Router) error {
 		return
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	r.GET("/tasks", mw.AuthUser(
@@ -75,10 +75,21 @@ func (t *Task) Bind(r *htr.Router) error {
 		mw.CtxSetUserID,
 	))
 
-	return nil
+	return t.Cleanup, nil
 }
 
-func (t *Task) GetAll(w http.ResponseWriter, r *http.Request, _ htr.Params) {
+// Cleanup closes the Task's Pub river and deletes it from the DB.
+func (t Task) Cleanup() error {
+	if err := t.Pub.Close(); err != nil {
+		return err
+	}
+
+	return t.Update(func(tx *bolt.Tx) error {
+		return river.DeletePub(TaskNotifs, NotifStream, tx)
+	})
+}
+
+func (t Task) GetAll(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 	vals, err := url.ParseQuery(r.URL.RawQuery)
 	if err != nil {
 		http.Error(w, errors.Wrap(
@@ -147,7 +158,7 @@ func (t *Task) GetAll(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 	json.NewEncoder(w).Encode(ts)
 }
 
-func (t *Task) Create(w http.ResponseWriter, r *http.Request, _ htr.Params) {
+func (t Task) Create(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 	userID := mw.CtxGetUserID(r)
 
 	tsk := new(task.Task)
@@ -234,7 +245,7 @@ func (t *Task) Create(w http.ResponseWriter, r *http.Request, _ htr.Params) {
 	json.NewEncoder(w).Encode(tsk)
 }
 
-func (t *Task) Get(w http.ResponseWriter, r *http.Request, ps htr.Params) {
+func (t Task) Get(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	userID := mw.CtxGetUserID(r)
 	tIDString, err := uuid.FromString(ps.ByName("id"))
 	if err != nil {
@@ -264,7 +275,7 @@ func (t *Task) Get(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	json.NewEncoder(w).Encode(tsk)
 }
 
-func (t *Task) Delete(w http.ResponseWriter, r *http.Request, ps htr.Params) {
+func (t Task) Delete(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	userID := mw.CtxGetUserID(r)
 	tIDString := ps.ByName("id")
 	tUUID, err := uuid.FromString(tIDString)
@@ -313,7 +324,7 @@ func (t *Task) Delete(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	}
 }
 
-func (t *Task) Put(w http.ResponseWriter, r *http.Request, ps htr.Params) {
+func (t Task) Put(w http.ResponseWriter, r *http.Request, ps htr.Params) {
 	userID := mw.CtxGetUserID(r)
 	tIDString, err := uuid.FromString(ps.ByName("id"))
 	if err != nil {

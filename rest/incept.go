@@ -21,12 +21,12 @@ type Incept struct {
 }
 
 // Bind implements API.Bind on Incept.
-func (i Incept) Bind(r *httprouter.Router) error {
+func (i Incept) Bind(r *httprouter.Router) (Cleanup, error) {
 	if i.DB == nil {
-		return errors.New("Incept DB handle must not be nil")
+		return nil, errors.New("nil Incept DB handle")
 	}
 	r.POST("/incept/:key", i.Incept)
-	return nil
+	return nil, nil
 }
 
 func (i Incept) Incept(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {

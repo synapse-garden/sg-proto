@@ -39,7 +39,7 @@ func (s *NotifSuite) SetUpTest(c *C) {
 
 func (s *NotifSuite) TearDownTest(c *C) {
 	if db := s.db; db != nil {
-		c.Assert(sgt.CleanupDB(db), IsNil)
+		c.Assert(sgt.Cleanup(db), IsNil)
 		c.Assert(os.Remove(s.tmpDir), IsNil)
 	}
 }

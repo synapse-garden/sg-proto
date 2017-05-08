@@ -2,6 +2,7 @@ package river
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/boltdb/bolt"
 )
@@ -27,7 +28,7 @@ func CheckRiverNotExists(id, streamID string) func(*bolt.Tx) error {
 			return nil
 		}
 
-		return errExists(id)
+		return errExists(fmt.Sprintf("%s/%s", streamID, id))
 	}
 }
 

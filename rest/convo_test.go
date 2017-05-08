@@ -12,22 +12,22 @@ import (
 	"github.com/synapse-garden/sg-proto/convo"
 	"github.com/synapse-garden/sg-proto/rest"
 	"github.com/synapse-garden/sg-proto/stream"
-	"github.com/synapse-garden/sg-proto/stream/river"
 	sgt "github.com/synapse-garden/sg-proto/testing"
 	"github.com/synapse-garden/sg-proto/users"
 
-	"github.com/boltdb/bolt"
 	"github.com/julienschmidt/httprouter"
 	uuid "github.com/satori/go.uuid"
 	ws "golang.org/x/net/websocket"
 	. "gopkg.in/check.v1"
 )
 
+var _ = rest.API(new(rest.Convo))
+
 func prepConvoAPI(c *C,
 	r *httprouter.Router,
 	api *rest.Convo,
 	names ...string,
-) (*htt.Server, map[string]auth.Token) {
+) (*htt.Server, rest.Cleanup, map[string]auth.Token) {
 	tokens := make(map[string]auth.Token)
 
 	for _, user := range names {
@@ -38,24 +38,19 @@ func prepConvoAPI(c *C,
 		tokens[user] = sesh.Token
 	}
 
-	c.Assert(api.Bind(r), IsNil)
+	cc, err := api.Bind(r)
+	c.Assert(err, IsNil)
 
 	// Make a testing server to run it.
-	return htt.NewServer(r), tokens
-}
-
-func cleanupConvoAPI(c *C, api rest.Convo) {
-	c.Assert(api.Pub.Close(), IsNil)
-	c.Assert(api.Update(func(tx *bolt.Tx) error {
-		return river.DeletePub(rest.ConvoNotifs, rest.NotifStream, tx)
-	}), IsNil)
+	return htt.NewServer(r), cc, tokens
 }
 
 func (s *RESTSuite) TestConvoCreate(c *C) {
 	r := httprouter.New()
 	api := rest.Convo{DB: s.db}
-	srv, tokens := prepConvoAPI(c, r, &api, "bodie", "bob", "jim")
+	srv, cc, tokens := prepConvoAPI(c, r, &api, "bodie", "bob", "jim")
 	defer srv.Close()
+	defer cc()
 
 	conv := &convo.Convo{Group: users.Group{
 		Owner:   "bodie",
@@ -101,15 +96,14 @@ func (s *RESTSuite) TestConvoCreate(c *C) {
 		http.StatusUnauthorized,
 		sgt.Bearer(tokens["jim"]),
 	), IsNil)
-
-	cleanupConvoAPI(c, api)
 }
 
 func (s *RESTSuite) TestConvoPut(c *C) {
 	r := httprouter.New()
 	api := rest.Convo{DB: s.db}
-	srv, tokens := prepConvoAPI(c, r, &api, "bodie", "bob", "jim")
+	srv, cc, tokens := prepConvoAPI(c, r, &api, "bodie", "bob", "jim")
 	defer srv.Close()
+	defer cc()
 
 	conv := &convo.Convo{Group: users.Group{
 		Owner:   "bodie",
@@ -222,15 +216,14 @@ func (s *RESTSuite) TestConvoPut(c *C) {
 
 	c.Assert(connBodie.Close(), IsNil)
 	c.Assert(connJim.Close(), IsNil)
-
-	cleanupConvoAPI(c, api)
 }
 
 func (s *RESTSuite) TestConvoDelete(c *C) {
 	r := httprouter.New()
 	api := rest.Convo{DB: s.db}
-	srv, tokens := prepConvoAPI(c, r, &api, "bodie", "bob", "jim")
+	srv, cc, tokens := prepConvoAPI(c, r, &api, "bodie", "bob", "jim")
 	defer srv.Close()
+	defer cc()
 
 	conv := &convo.Convo{Group: users.Group{
 		Owner:   "bodie",
@@ -294,8 +287,6 @@ func (s *RESTSuite) TestConvoDelete(c *C) {
 		http.StatusNotFound,
 		sgt.Bearer(tokens["bodie"]),
 	), IsNil)
-
-	cleanupConvoAPI(c, api)
 }
 
 // GET messages
@@ -310,9 +301,9 @@ func (s *RESTSuite) TestConvoHangupWhileDelete(c *C) {
 	// delete when the websocket is also being hung up.
 	r := httprouter.New()
 	api := rest.Convo{DB: s.db}
-	srv, tokens := prepConvoAPI(c, r, &api, "bodie")
+	srv, cc, tokens := prepConvoAPI(c, r, &api, "bodie")
 	defer srv.Close()
-	defer cleanupConvoAPI(c, api)
+	defer cc()
 
 	conv := &convo.Convo{Group: users.Group{
 		Owner:   "bodie",

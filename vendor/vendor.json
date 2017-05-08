@@ -80,6 +80,56 @@
 			"tree": true
 		},
 		{
+		{
+			"checksumSHA1": "ztypj7pDqHM1CVbBfHcPRp1n+bI=",
+			"path": "github.com/droundy/goopt",
+			"revision": "e5c9ab183a102ef3ad2363b04483784258984157",
+			"revisionTime": "2015-10-12T15:57:52Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "iJdDp5m6MIjMPKCOxFMvl7jEJ/Y=",
+			"path": "github.com/go-mangos/mangos",
+			"revision": "c3916ba23b3aa721fd13b4dec916b2d15f4a2520",
+			"revisionTime": "2016-07-19T02:05:16Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "bCABisMlBcpDa8h9npMeYZVcHHk=",
+			"path": "github.com/go-mangos/mangos/protocol/bus",
+			"revision": "c3916ba23b3aa721fd13b4dec916b2d15f4a2520",
+			"revisionTime": "2016-07-19T02:05:16Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "MmHghN8jA3dtjd5O17EKE5I+ODE=",
+			"path": "github.com/go-mangos/mangos/protocol/pub",
+			"revision": "c3916ba23b3aa721fd13b4dec916b2d15f4a2520",
+			"revisionTime": "2016-07-19T02:05:16Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "Jq6TpwsJA3GZI9ZciK/cmG1dYrM=",
+			"path": "github.com/go-mangos/mangos/protocol/sub",
+			"revision": "c3916ba23b3aa721fd13b4dec916b2d15f4a2520",
+			"revisionTime": "2016-07-19T02:05:16Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "7NRp/7iQJtQ8HcjwXGtAQzva/b8=",
+			"path": "github.com/go-mangos/mangos/transport/inproc",
+			"revision": "c3916ba23b3aa721fd13b4dec916b2d15f4a2520",
+			"revisionTime": "2016-07-19T02:05:16Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "VKgJ7n+9zWTjTv696ilbvLOkDpA=",
+			"path": "github.com/gorilla/websocket",
+			"revision": "2d1e4548da234d9cb742cc3628556fef86aafbac",
+			"revisionTime": "2016-09-12T15:30:41Z",
+			"tree": true
+		},
+		{
 			"checksumSHA1": "Drsz3oT4NmM2tVQCRk+occxVvPA=",
 			"path": "github.com/julienschmidt/httprouter",
 			"revision": "d8ff598a019f2c7bad0980917a588193cf26666e",
@@ -105,6 +155,13 @@
 			"path": "github.com/satori/go.uuid",
 			"revision": "0aa62d5ddceb50dbcb909d790b5345affd3669b6",
 			"revisionTime": "2016-07-13T18:03:06Z",
+			"tree": true
+		},
+		{
+			"checksumSHA1": "lz2tjPljCQa8GsdeTPUj9VdkL1A=",
+			"path": "golang.org/x/net/context",
+			"revision": "71a035914f99bb58fe82eac0f1289f10963d876c",
+			"revisionTime": "2016-09-12T21:59:12Z",
 			"tree": true
 		},
 		{
